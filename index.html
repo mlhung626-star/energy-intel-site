@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國際能源情資查詢</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222c37; --line:#2e3a47;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#4ea1ff; --chip:#2a3742;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.6}
+  header{background:linear-gradient(135deg,#1a2129,#0f1419);border-bottom:1px solid var(--line);
+    padding:22px 20px 16px}
+  h1{margin:0 0 4px;font-size:22px;font-weight:700}
+  .sub{color:var(--muted);font-size:13px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  .controls{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
+    padding:14px 20px}
+  .controls .wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  #search{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;color:var(--text);font-size:15px;outline:none}
+  #search:focus{border-color:var(--accent)}
+  select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;color:var(--text);font-size:14px;outline:none;cursor:pointer}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0 2px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:6px 14px;font-size:13px;cursor:pointer;color:var(--muted);user-select:none;transition:.15s}
+  .chip:hover{border-color:var(--accent)}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#0b1118;font-weight:600}
+  .count{color:var(--muted);font-size:13px;padding:10px 0 0}
+  .list{padding:6px 0 60px}
+  .card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);
+    border-radius:12px;padding:16px 18px;margin:12px 0;transition:.15s}
+  .card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card.jp{border-left-color:#ff6b6b}
+  .card.kr{border-left-color:#4ea1ff}
+  .card.ca{border-left-color:#ff4d4d}
+  .card.eu{border-left-color:#ffd24d}
+  .card.ch{border-left-color:#ff5c5c}
+  .card.us{border-left-color:#6c8cff}
+  .card.fr{border-left-color:#5ad1c4}
+  .card.gb{border-left-color:#cf5bd6}
+  .card.de{border-left-color:#ffb347}
+  .card.intl{border-left-color:#7ee0a0}
+  .card .top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:12px}
+  .region{font-weight:700;padding:2px 9px;border-radius:6px;font-size:12px;
+    background:rgba(78,161,255,.16);color:#bcd6f5}
+  .kind{font-weight:700;padding:2px 9px;border-radius:6px;font-size:12px}
+  .kind.gov{background:rgba(126,224,160,.16);color:#9be9b8}
+  .kind.news{background:rgba(255,179,71,.16);color:#ffce8f}
+  .src{color:var(--muted)}
+  .date{color:var(--muted);margin-left:auto}
+  .grouplabel{font-size:12px;color:var(--muted);margin:8px 0 2px;font-weight:600}
+  .cchip{background:#243244;border:1px solid #34465b;border-radius:8px;
+    padding:6px 12px;font-size:13px;cursor:pointer;color:#cdd9e6;user-select:none;transition:.15s}
+  .cchip:hover{border-color:#7ee0a0}
+  .cchip.on{background:#2f6f4e;border-color:#52c98a;color:#eafff2;font-weight:600}
+  .kchip{background:#2a3742;border:1px solid var(--line);border-radius:8px;
+    padding:6px 14px;font-size:13px;cursor:pointer;color:var(--muted);user-select:none;transition:.15s}
+  .kchip:hover{border-color:var(--accent)}
+  .kchip.on{background:var(--accent);border-color:var(--accent);color:#0b1118;font-weight:600}
+  .topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  #toggleFilters{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;color:var(--text);font-size:14px;cursor:pointer;white-space:nowrap}
+  #toggleFilters:hover{border-color:var(--accent)}
+  #toggleFilters.active{background:var(--accent);border-color:var(--accent);color:#0b1118;font-weight:600}
+  .controls .wrap.filterpanel{display:block;padding-top:4px}
+  .controls .wrap.filterpanel.collapsed{display:none}
+  .filtersummary{color:var(--muted);font-size:12.5px;padding:8px 0 0}
+  .rec{font-weight:700;padding:2px 9px;border-radius:6px;font-size:12px;
+    background:rgba(255,209,77,.18);color:#ffdf8a}
+  .twnote{margin:0 0 10px;font-size:13px;color:#ffd98a;background:rgba(255,209,77,.08);
+    border-left:3px solid #e0b94d;border-radius:0 6px 6px 0;padding:7px 11px}
+  .card h3{margin:0 0 6px;font-size:17px;line-height:1.45}
+  .card h3 a{color:var(--text);text-decoration:none}
+  .card h3 a:hover{color:var(--accent);text-decoration:underline}
+  .summary{color:#c4cfd9;font-size:14.5px;margin:0 0 10px}
+  .orig{color:#6f7d8a;font-size:12.5px;margin:0 0 10px;font-style:italic}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:2px 9px;font-size:12px;color:var(--muted);cursor:pointer}
+  .tag:hover{color:var(--accent);border-color:var(--accent)}
+  .empty{text-align:center;color:var(--muted);padding:60px 20px}
+  footer{border-top:1px solid var(--line);color:var(--muted);font-size:12px;
+    padding:18px 20px;text-align:center}
+  mark{background:rgba(255,200,0,.35);color:inherit;border-radius:3px;padding:0 1px}
+  @media(max-width:600px){.date{margin-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>國際能源情資查詢</h1>
+    <div class="sub">日／韓 RSS＋加拿大環境與自然資源＋世界核能新聞＋歐盟能源總署＋英國、德國等政府與新聞來源｜共 <span id="total">0</span> 則｜更新：2026-06-25</div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap topbar">
+    <input id="search" type="text" placeholder="🔍 搜尋關鍵字（標題、摘要、來源…）">
+    <select id="sort">
+      <option value="rec">⭐ 推薦優先</option>
+      <option value="new">時間：新→舊</option>
+      <option value="old">時間：舊→新</option>
+    </select>
+    <button id="toggleFilters" type="button">⚙️ 篩選 ▾</button>
+  </div>
+  <div class="wrap filterpanel collapsed" id="filterPanel">
+    <div class="grouplabel">🌍 國家／地區</div><div class="filters" id="countryFilters"></div>
+    <div class="grouplabel">📰 來源類型</div><div class="filters" id="kindFilters"></div>
+    <div class="grouplabel"># 議題</div><div class="filters" id="tagFilters"></div>
+  </div>
+  <div class="wrap"><div class="count" id="count"></div></div>
+  <div class="wrap"><div class="filtersummary" id="filterSummary"></div></div>
+</div>
+
+<div class="wrap"><div class="list" id="list"></div></div>
+
+<footer>
+  資料來源：Inoreader 公開 RSS（日本／韓國情資）、Canada.ca 環境與自然資源、英國 DESNZ、歐盟執委會與能源總署、瑞士 BFE、美國 DOE（白宮）、法國 Vie publique、韓國氣候能源環境部（MCEE）、產業通商部（MOTIR）、能源經濟研究院（KEEI）、原子力安全委員會（NSSC）、World Nuclear News、Clean Energy Wire、歐盟理事會、IEA（國際能源總署）、IRENA（國際再生能源總署）等。「來源類型」中「官方」指網站為政府單位，「其他新聞」為新聞媒體。原文已翻譯為繁體中文摘要，點擊標題可開啟原文。World Nuclear News 及部分政府公告板條目連結至其新聞／公告專區。
+</footer>
+
+<script>
+const FLAG = {日本:"🇯🇵",韓國:"🇰🇷",加拿大:"🇨🇦",歐盟:"🇪🇺",瑞士:"🇨🇭",美國:"🇺🇸",法國:"🇫🇷",英國:"🇬🇧",德國:"🇩🇪",國際:"🌐"};
+const RCLS = {日本:"jp",韓國:"kr",加拿大:"ca",歐盟:"eu",瑞士:"ch",美國:"us",法國:"fr",英國:"gb",德國:"de",國際:"intl"};
+// 官方 = 網站來源為政府單位；其餘為新聞媒體
+function kindOf(d){
+  if(["加拿大","歐盟","瑞士","美國","法國","英國"].includes(d.region)) return "官方";
+  if(/(經濟產業省|環境省|氣候能源環境部|產業通商部|能源經濟研究院|原子力安全委員會|KEEI|NSSC|IEA|IRENA)/.test(d.source)) return "官方";
+  return "其他新聞";
+}
+
+// ===== 推薦觀看：依主題加權，並標註對台灣的影響／可借鏡之處 =====
+const REC_KW = [
+  {re:/(核能|核電|原発|原子力|反應爐|reactor|nuclear|SMR|鈾|核燃料|核廢)/i, w:5, theme:"nuclear"},
+  {re:/(能源安全|安全保障|供應鏈|供給網|進口|依賴|海峽|security|supply)/i, w:4, theme:"security"},
+  {re:/(油價|電價|電費|價格|限價|成本|補貼|關稅|price|tariff)/i, w:4, theme:"price"},
+  {re:/(政策|戰略|策略|法案|法律|新法|改革|路線圖|計畫|機制|strategy|policy|act|law)/i, w:3, theme:"policy"},
+  {re:/(再生能源|可再生|太陽能|太陽光|風電|離岸風電|地熱|氫能|儲能|電網|renewable|solar|wind|grid|hydrogen)/i, w:3, theme:"renewable"},
+];
+const TW_NOTE = {
+  nuclear:"🇹🇼 台灣借鏡：核電延役／重啟與 SMR 發展，牽動台灣能源結構與非核家園政策的辯論。",
+  security:"🇹🇼 台灣借鏡：能源逾 97% 仰賴進口，能源安全、海運通道與供應鏈韌性是台灣核心課題。",
+  price:"🇹🇼 台灣影響：國際油價、限價與補貼機制，連動台灣油電價格與台電財務。",
+  policy:"🇹🇼 台灣借鏡：他國能源政策與法制推動經驗，可作為台灣能源轉型的參考。",
+  renewable:"🇹🇼 台灣借鏡：再生能源競合與離岸風電、儲能、電網布局，可對照台灣綠能政策與產業發展。"
+};
+const REC_THRESHOLD = 4;
+const _recCache = new Map();
+function recInfo(d){
+  if(_recCache.has(d)) return _recCache.get(d);
+  const hay = d.title+" "+d.summary+" "+d.orig+" "+d.tags.join(" ");
+  let score=0, theme=null, bestW=0;
+  for(const k of REC_KW){ if(k.re.test(hay)){ score+=k.w; if(k.w>bestW){bestW=k.w; theme=k.theme;} } }
+  const info={score, theme, rec:score>=REC_THRESHOLD};
+  _recCache.set(d, info); return info;
+}
+
+const DATA = [
+  // ===== 日本 =====
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／山田豊 部落格",
+   title:"大勝兩年即崩潰——施凱爾首相辭職揭示「移民國家」英國的極限",
+   orig:"大勝から2年で崩壊――スターマー首相辞任が示した「移民国家」英国の限界",
+   summary:"英國施凱爾（Starmer）首相在2024年大勝後僅兩年辭職，反映移民、住宅、醫療與生活成本累積的民怨。文章主張外國人比例已達約16%的英國是前車之鑑，日本應趁比例仍約3%時推動移民總量管制。",
+   tags:["核能","電力","能源","SMR","淨零"],
+   link:"https://yutakarlson.blogspot.com/2026/06/2_0269507008.html"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"空調冷媒氟氯碳化物：回收業改採登記制，擺脫對中國依賴",
+   orig:"空調用冷媒フロン、集約業を登録制に 中国依存脱却へ回収・再生促進",
+   summary:"日本將把空調冷媒（氟氯碳化物）的集中回收業者改為登記制，推動回收與再生，以降低對中國的依賴。",
+   tags:["能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUA185YE0Y6A610C2000000/"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"不用電從海水回收CO2，神戶學院大學開發新材料、可望降低成本",
+   orig:"電気使わず海水からCO2回収、神戸学院大学が新素材 コスト減期待",
+   summary:"神戶學院大學開發出不需用電即可從海水中回收二氧化碳的新材料，有望降低碳捕捉成本。",
+   tags:["電力","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOSG083DR0Y6A600C2000000/"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"日經「科學」主題解說與最新新聞一覽",
+   orig:"「サイエンス」を日経が解説・最新ニュース一覧",
+   summary:"日本經濟新聞的「科學」專題新聞彙整頁。",
+   tags:["能源"],
+   link:"https://www.nikkei.com/theme/?dw=24032503"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"JX金屬與三菱材料聯手力守銅冶煉，借鏡鋁業整併教訓",
+   orig:"JX金属と三菱マテ、銅製錬死守へ共闘 ライバル組ませたアルミの教訓",
+   summary:"日本JX金屬與三菱材料攜手合作，力圖守住國內銅冶煉產業，並參考過去促使對手整併的鋁業教訓。",
+   tags:["能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUC192J00Z10C26A6000000/"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"【日經】解讀製造業上游：機械與材料產業現況",
+   orig:"【日経】製造業の上流 機械・素材産業の今を読む",
+   summary:"日本經濟新聞解讀製造業上游的機械與材料產業現況之專題。",
+   tags:["能源"],
+   link:"https://www.nikkei.com/theme/?dw=24090200"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／日刊工業新聞",
+   title:"廣角／新潟商工會議所會長廣田幹人（上）：柏崎刈羽核電廠重啟",
+   orig:"広角／新潟商工会議所会頭・廣田幹人（上）柏崎刈羽原発再稼働",
+   summary:"日刊工業新聞專訪新潟商工會議所會長廣田幹人，談柏崎刈羽核電廠重啟對地方經濟的意義。",
+   tags:["核能"],
+   link:"http://www.nikkan.co.jp/articles/view/00784949"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／日刊工業新聞",
+   title:"廣角／廣田幹人（上）：柏崎刈羽核電廠重啟（Google新聞）",
+   orig:"広角／新潟商工会議所会頭・廣田幹人（上）柏崎刈羽原発再稼働 - 日刊工業新聞",
+   summary:"同上篇之 Google 新聞轉載連結，內容為新潟商工會議所會長談柏崎刈羽核電廠重啟。",
+   tags:["核能"],
+   link:"https://news.google.com/rss/articles/CBMiW0FVX3lxTE9ZOWg2WVlwdlZ3cnRfSzQyVXZ4OUNDSUJxNFU2ZDlRbW5kdG9TTUxhd0RYNEJ2TGQ1U2NMdUV1S25oSDNSVksyR21xZzJhT0pLazRqSEJmOHYxdnM?oc=5"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／日本經濟新聞",
+   title:"全國51%市區本年度預算歲入創新高；松江因核電重啟稅收增加",
+   orig:"全国の市区51% 歳入最大 今年度の予算、日経調査 松江 原発再稼働で税収増",
+   summary:"日經調查顯示全國51%市區本年度預算歲入創新高，松江市因核電廠重啟帶動稅收增加。",
+   tags:["核能"],
+   link:"https://news.google.com/rss/articles/CBMiogFBVV95cUxQUEhVSDlCbkFlRjJGbGVLcnU0UjFJOHdIcnVra2ZQUXMtVWZ3OTFzS2FtWFY0bWpncFFLYjVVRHNFa2VjOXR1TUYzUDVBN0N4d08tem9Qc01OSlB6czlsekE0QllyZjhrV0M5RF92aUJWTFpqbzBqZjBiczJZNGY3S0s3c3hKSWlOOVF4NjJfalVpRXhIMmZyQndMRG5YLVkzbVE?oc=5"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／Ameblo",
+   title:"中國「全球最大級核電運轉與建設」與事故隱蔽質疑",
+   orig:"中国「世界最大級の原発稼働・建設」",
+   summary:"文章引述報導指中國運轉中核電機組達58座、在建至少30座以上，邁向全球最大核電大國，但質疑其因人才不足、技術「截長補短」而潛藏安全與事故隱蔽問題。",
+   tags:["核能","電力"],
+   link:"https://ameblo.jp/minaseyori/entry-12970268153.html"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／d-menu新聞",
+   title:"泊核電廠3號機今後焦點為重啟時程，有看法認為最快2027年冬",
+   orig:"泊原発3号機 今後の焦点は再稼働時期 27年冬との見方も",
+   summary:"北海道電力泊核電廠3號機審查推進，今後焦點轉向重啟時程，最快可能2027年冬投入營運。",
+   tags:["核能"],
+   link:"https://news.google.com/rss/articles/CBMifEFVX3lxTE9YanYxWGFLTWVMcmdTbTdvelNtMkJiMG00M2w0S0pISWo2Q0lGRFpqUktlc3g3eGlXR0dISHFjTUJoUzRnVnQ1WEFEZDVPZXlyb19oZGFvWF9yOW5vRGxBb1FYVjkxeTctQklnUFFsRUdEREFxWXNnTkNZakvSAYIBQVVfeXFMUFJmeVNwa2hPamxPakE4S1Nrd3VKQU5XcEJsOFpWZUpwVEE1SUxYZ3Q4dDBWV19FSVlWMHJENENURjlzNEJIS3FsdnJVa1YxUWdVaFVqREVORkxQYmlpOU92WXV0QTA1dnJGdXBzdGU1OF9xeUlhWU02blplNXkxbi1xdw?oc=5"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／TBS",
+   title:"經產省與IAEA簽署備忘錄，向考慮引進核能的國家提供技術支援",
+   orig:"経産省とIAEAが覚書に署名 原子力の導入検討する国への技術支援など",
+   summary:"日本經濟產業省與國際原子能總署（IAEA）簽署備忘錄，將對印尼、馬來西亞等考慮引進核能（含SMR）的國家提供電力基礎設施與人才培育等技術支援。",
+   tags:["核能","電力","能源","SMR"],
+   link:"https://news.livedoor.com/article/detail/31634135/"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／北海道新聞",
+   title:"泊核電廠3號機今後焦點為重啟時程，最快2027年冬",
+   orig:"泊原発3号機 今後の焦点は再稼働時期 27年冬との見方も（北海道新聞）",
+   summary:"北海道電力泊核電廠3號機工事計畫審查大致結束，今後焦點為北電今夏將公布的重啟目標時程，最快2027年冬重啟營運。",
+   tags:["核能","電力"],
+   link:"https://www.hokkaido-np.co.jp/article/1328676/"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／北海道新聞",
+   title:"泊核電廠3號機工事計畫審查大致結束，規制委核准恐在秋季後",
+   orig:"泊原発3号機 工事計画審査おおむね終了 規制委の認可は秋以降か（北海道新聞）",
+   summary:"北海道電力泊核電廠3號機工事計畫審查會合大致結束，今後轉為書面審查；北電稱地震解析程式新發現缺陷，規制委核准預估在秋季以後。",
+   tags:["核能","電力"],
+   link:"https://www.hokkaido-np.co.jp/article/1328675/"},
+  {region:"日本",date:"2026-06-23",source:"日本核電重啟／北海道新聞數位版",
+   title:"泊核電廠3號機今後焦點為重啟時程，最快2027年冬投入營運",
+   orig:"泊原発3号機 今後の焦点は再稼働時期 営業運転、早くて27年冬",
+   summary:"北海道電力泊核電廠3號機重啟焦點轉向時程，營業運轉最快2027年冬。",
+   tags:["核能"],
+   link:"https://news.google.com/rss/articles/CBMiWkFVX3lxTFAza3FUanlKOW53MHFtSmRuYktsUEJpZkNaMTBUX2RvajZsVHY0N2FFSHB1UkdtMVN3aEtuUmZrQlZJUG1vVTB4dlpJRzNfVzRZRzlnS3V0clU2QQ?oc=5"},
+  {region:"日本",date:"2026-06-23",source:"經濟產業省",
+   title:"赤澤經濟產業大臣與IAEA葛羅西事務局長舉行會談",
+   orig:"赤澤経済産業大臣がグロッシーIAEA事務局長と会談を行いました",
+   summary:"日本經濟產業大臣赤澤與IAEA事務局長葛羅西（Grossi）舉行會談。",
+   tags:["能源"],
+   link:"https://www.meti.go.jp/press/2026/06/20260623002/20260623002.html"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"關西電力旗下以無人機遠端巡檢離島設備，作業由整天縮短至4小時",
+   orig:"関西電力系、離島設備をドローンで遠隔点検 作業を丸1日→4時間に",
+   summary:"關西電力旗下企業以無人機遠端巡檢離島電力設備，將原本整整一天的作業縮短為4小時。",
+   tags:["電力","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUF192TF0Z10C26A6000000/"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"東京電力第三方委員會即將解散，報告稱「核電安全意識已扎根」",
+   orig:"東京電力の第三者委、近く解散へ 報告書「原発の安全意識が定着」",
+   summary:"東京電力的第三方委員會即將解散，報告指出核電安全意識已在公司內部扎根。",
+   tags:["核能","電力"],
+   link:"https://www.nikkei.com/article/DGXZQOUC236B70T20C26A6000000/"},
+  {region:"日本",date:"2026-06-23",source:"日本經濟新聞",
+   title:"九州經產局與福岡縣攜手推動離岸風電，整備供應鏈並改善行政手續",
+   orig:"九州経産局や福岡県、洋上風力で連携 供給網整備や行政手続き改善",
+   summary:"九州經濟產業局與福岡縣合作推動離岸風電，整備供應鏈並改善行政審批手續。",
+   tags:["能源"],
+   link:"https://www.nikkei.com/article/DGXZQOJC2367N0T20C26A6000000/"},
+  {region:"日本",date:"2026-06-23",source:"環境省",
+   title:"TNFD與環境省合辦活動「作為商業課題的自然：能力建構的必要性與實踐」",
+   orig:"TNFD・環境省共催イベント「ビジネス課題としての自然：能力形成の必要性とその実践」の開催について",
+   summary:"日本環境省與自然相關財務資訊揭露工作小組（TNFD）將於7月10日在東京合辦活動，邀請TNFD事務局長等聚焦企業在自然議題上的能力建構與實踐。",
+   tags:["能源","淨零"],
+   link:"https://www.env.go.jp/press/press_05178.html"},
+
+  // ===== 韓國 =====
+  {region:"韓國",date:"2026-06-24",source:"能源經濟新聞",
+   title:"【獨家】打造「陽光收益村」標準工程費，降低居民負擔並提供指引",
+   orig:"[단독] 햇빛소득마을 '표준 사업비' 만든다…주민 부담 낮추고 가이드라인 제시",
+   summary:"韓國政府為擴大「陽光收益村」（社區型太陽光電）事業，正研擬太陽能發電的標準工程費，以降低居民負擔、減少與施工業者的資訊不對稱，今年目標申請1000個村落。",
+   tags:["太陽能","能源"],
+   link:"https://www.ekn.kr/web/view.php?key=20260624024015789"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"Moment Energy 啟用全球最大電動車電池回收廠「Megafactory 1」",
+   orig:"모먼트 에너지, '메가팩토리1' 가동 시작",
+   summary:"加拿大溫哥華能源新創 Moment Energy 啟用全球最大電動車電池回收設施「Megafactory 1」，將退役電動車電池轉為商用儲能系統（ESS），2030年產能上看每年1GWh。",
+   tags:["電力","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299452"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"Otec Carrier 推出最高29L除濕力「變頻除濕機」",
+   orig:"오텍캐리어, 최대 29L 제습 성능 '인버터 제습기' 출시",
+   summary:"韓國 Otec Carrier 推出最高除濕量29L的變頻除濕機新品，主打強力除濕與能源效率一級，降低梅雨季電費。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299448"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"蔚山市著手潛艦用氫燃料電池開發與國產化",
+   orig:"울산시, 잠수함용 수소연료전지 개발 국산화 착수",
+   summary:"韓國蔚山市獲選國家研發計畫，著手開發20kW級潛艦用氮循環型氫燃料電池系統並推動國產化，總經費約113億韓元，目標2029年前完成。",
+   tags:["氫能","能源","淨零"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299451"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"南部發電與釜山公共機關合辦「廉政Live」活動",
+   orig:"남부발전, 부산지역 공공기관 합동 '청렴라이브' 개최",
+   summary:"韓國南部發電與釜山地區公共機關倫理經營協議體「廉政Wave」合辦「廉政Live」，強化員工廉政能力與機關間合作。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299449"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"韓水原啟動「2026安心路燈Plus事業」公開徵件",
+   orig:"한수원 '2026 안심가로등 플러스 사업' 공모",
+   summary:"韓國水力原子力（韓水原）於6/23至7/24公開徵件「2026安心路燈Plus事業」，在治安死角設置太陽能路燈與智慧桿，最終選定9個地區。",
+   tags:["太陽能","電力","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299447"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"麗水光陽港啟動LNG加注（Bunkering）商業化",
+   orig:"여수광양항, LNG 벙커링 상용화 시동",
+   summary:"韓國麗水光陽港務公社成功完成對9萬噸級散裝船供應約1050噸LNG的加注作業，邁向LNG船舶加注商業化、強化綠色能源樞紐港地位。",
+   tags:["LNG","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299445"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"南東發電召開「2026年第1次綠色成長委員會」",
+   orig:"남동발전 '2026년 제1차 녹색성장위원회' 개최",
+   summary:"韓國南東發電召開2026年第1次綠色成長委員會，討論氣候資訊揭露義務化、發電資產財務風險與減碳轉型計畫。",
+   tags:["能源","淨零"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299446"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"地區供熱公社招募「社區暖意滿滿」共生事業參與組織",
+   orig:"지역난방公, 지역 온기 더할 상생 사업 참여 조직 모집",
+   summary:"韓國地區供熱公社與社福協議會合作，招募參與「我們社區暖意滿滿」共生事業的社會經濟組織，支援解決地方能源與環境問題，申請至7/10。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299439"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"能源公團參加歐洲最大太陽能展 Intersolar Europe 2026",
+   orig:"에너지공단, 유럽 최대 태양광 전시회 참가",
+   summary:"韓國能源公團於6/23至25在德國慕尼黑參加歐洲最大太陽能展「Intersolar Europe 2026」，設韓國館並舉辦商務洽談，協助10家中小企業拓展海外市場。",
+   tags:["太陽能","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299440"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"瓦斯安全公社首爾西部分社推廣市民「瓦斯安全守則生活化」",
+   orig:"가스안전공사 서울서부지사, 시민 대상 '가스 안전수칙 생활화' 홍보 매진",
+   summary:"韓國瓦斯安全公社首爾西部分社於戰爭紀念館設置瓦斯安全體驗攤位，向親子與兒童宣導瓦斯安全守則。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299444"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"石油公社引領公共機關廉政提升與地方廉政文化擴散",
+   orig:"석유공사, 공공기관 청렴도 향상 · 지역사회 청렴문화 확산 선도",
+   summary:"韓國石油公社於蔚山本社召開「蔚山官民廉政協議體」共同會議，透過廉政市民監查官強化公共機關廉政文化。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299443"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"瓦斯安全公社持續擴大韓日兩國瓦斯安全與未來能源合作",
+   orig:"가스안전공사, 한일 양국 가스안전 · 미래 에너지 협력 체계 지속 확대",
+   summary:"韓國瓦斯安全公社（KGS）與日本高壓氣體保安協會（KHK）舉行第20屆定期會議，擴大瓦斯安全、氫能、氨等未來能源安全合作。",
+   tags:["氫能","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299442"},
+  {region:"韓國",date:"2026-06-24",source:"能源新聞",
+   title:"受伊拉克原油增產等影響，6月23日國際油價下跌",
+   orig:"이라크 원유 생산량 증가 등에 6월23일 국제유가 하락",
+   summary:"受荷莫茲海峽通航恢復跡象與伊拉克原油增產影響，6/23國際油價下跌；WTI 收73.21美元、Brent 77.08美元、杜拜原油71.77美元，以色列在黎巴嫩開火限制了跌幅。",
+   tags:["油價","能源"],
+   link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226321"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"第6次最高限價延長，加油站庫存管理拉警報",
+   orig:"6차 최고가격제 연장 발표에 주유소 재고 관리 비상",
+   summary:"韓國政府延後第7次石油最高限價、維持第6次價格，加油站因預期供應價將下調而取消訂油、忙於去庫存，石油流通市場不確定性升高。",
+   tags:["油價","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103249"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"強化地方政府細懸浮微粒分析能力，舉辦空氣影響預測系統教育訓練",
+   orig:"지자체 미세먼지 분석 역량 강화… 대기영향예측시스템 교육",
+   summary:"韓國國家細懸浮微粒資訊中心於6/24至26對17個市道公務員與研究機構舉辦「地區空氣影響預測系統（L-NEAS）」教育訓練，強化地方空污與臭氧分析及政策能力。",
+   tags:["環境","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103250"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"海峽通航有望恢復，伊拉克擴大原油產量",
+   orig:"해협 통항 재개 기대속 이라크 원유 생산량 확대",
+   summary:"受荷莫茲海峽通航恢復跡象與伊拉克南部油田增產影響，國際油價下跌；南部產量由約175萬桶/日擴大至約210萬桶/日，預估1~2個月內上看300萬桶/日。",
+   tags:["油價","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103248"},
+  {region:"韓國",date:"2026-06-24",source:"韓國公民參與／每日勞動新聞",
+   title:"【獨家】金屬工會參與「有經社勞委」的造船業社會對話",
+   orig:"[단독] 금속노조 '경사노위 있는' 조선업 사회적 대화 참가",
+   summary:"韓國金屬工會將參與在經濟社會勞動委員會（經社勞委）框架下的造船業社會對話。",
+   tags:["公民參與"],
+   link:"https://news.google.com/rss/articles/CBMicEFVX3lxTE9mNWMyRERsYkNUT01xbUVubENwMEk4TVhldzlEZ2wwYWhiM0UwNnlhTVhfTXowd3FZcm5QdFR5ZHNJbXo0TEVrTjBMV2ItUmFDcHJoNHNXWmJuNUpmd3p3U3hfdXFZMmlpS1dfT1NKcDI?oc=5"},
+  {region:"韓國",date:"2026-06-24",source:"韓國公民參與／Money Today",
+   title:"「我提的意見有反映到政策嗎」首爾市「M-Voting」全面改版",
+   orig:"\"내가 낸 의견, 정책 반영됐나\"…서울시 '엠보팅' 전면 개편",
+   summary:"首爾市市民參與平台「M-Voting」全面改版為政策參與型平台，市民可用標籤（#）找政策，並追蹤自己提出的意見如何反映到實際政策。平台會員逾30萬、累計投票436萬件。",
+   tags:["公民參與"],
+   link:"https://www.mt.co.kr/policy/2026/06/24/2026062408432953542"},
+  {region:"韓國",date:"2026-06-23",source:"能源平台新聞",
+   title:"【國內丁烷（LPG）日報：2026年6月24日】",
+   orig:"[일일 국내 부탄가 동향 : 2026년 6월 24일]",
+   summary:"據韓國石油公社 Opinet，6/24全國加油站車用丁烷（LPG）均價較前日上漲0.04韓元、為每公升1107.82韓元，首爾為1166.56韓元。",
+   tags:["油價","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103247"},
+
+  // ===== 加拿大（Canada.ca 環境與自然資源）=====
+  {region:"加拿大",date:"2026-06-23",source:"加拿大自然資源部",
+   title:"加拿大政府投資卑詩省、育空與西北地區的潔淨電力",
+   orig:"The Government of Canada invests in clean electricity in British Columbia, Yukon and the Northwest Territories",
+   summary:"2026年6月23日，能源與自然資源部長 Tim Hodgson 宣布逾1600萬加元，支持卑詩省、育空與西北地區5項潔淨能源基礎設施計畫。加拿大電力需求預估到2050年將翻倍，並將推動「全國電力策略」。",
+   tags:["潔淨電力","電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/the-government-of-canada-invests-in-clean-electricity-in-british-columbia-yukon-and-the-northwest-territories.html"},
+  {region:"加拿大",date:"2026-06-23",source:"加拿大環境與氣候變遷部",
+   title:"聯合聲明——能源部門甲烷減排是能源安全的支柱",
+   orig:"Joint Statement—Methane abatement in the energy sector as a pillar of energy security",
+   summary:"加拿大與夥伴發表聯合聲明，重申加速能源部門甲烷減排的承諾，並視其為能源安全的支柱。",
+   tags:["甲烷","能源","氣候"],
+   link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/joint-statementmethane-abatement-in-the-energy-sector-as-a-pillar-of-energy-security.html"},
+  {region:"加拿大",date:"2026-06-23",source:"加拿大環境與氣候變遷部",
+   title:"加拿大—歐盟就聯合國秘書長甲烷行動呼籲發表聯合聲明",
+   orig:"Canada-European Union Joint Statement on the United Nations Secretary-General's Call to Action on Methane",
+   summary:"作為「全球甲烷承諾（GMP）」共同召集人，加拿大與歐盟響應聯合國秘書長2026年6月的甲烷減排行動呼籲。",
+   tags:["甲烷","氣候","能源"],
+   link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/canada-european-union-joint-statement-on-the-united-nations-secretary-generals-call-to-action-on-methane.html"},
+  {region:"加拿大",date:"2026-06-22",source:"加拿大環境與氣候變遷部",
+   title:"Dabrusin 部長出席第10屆氣候行動部長級會議與倫敦氣候行動週",
+   orig:"Minister Dabrusin joins global partners at the 10th Ministerial on Climate Action and London Climate Action Week",
+   summary:"環境、氣候變遷與自然部長 Julie Dabrusin 與歐盟、中國共同主持在布魯塞爾舉行的第10屆氣候行動部長級會議（MoCA10），並參加倫敦氣候行動週。",
+   tags:["氣候","能源"],
+   link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/minister-dabrusin-joins-global-partners-at-the-10th-ministerial-on-climate-action-and-london-climate-action-week.html"},
+  {region:"加拿大",date:"2026-06-19",source:"加拿大自然資源部",
+   title:"Hodgson 部長將在黃刀鎮發布能源與礦業相關公告",
+   orig:"Minister Hodgson to make energy and mining announcements in Yellowknife",
+   summary:"能源與自然資源部長 Hodgson 將在西北地區黃刀鎮發布能源與礦業相關公告。",
+   tags:["能源","關鍵礦產"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/minister-hodgson-to-make-energy-and-mining-announcements-in-yellowknife.html"},
+  {region:"加拿大",date:"2026-06-19",source:"加拿大自然資源部",
+   title:"Chartrand 部長將發布潔淨能源公告",
+   orig:"Minister Chartrand to make clean energy announcement",
+   summary:"北方與北極事務部長 Rebecca Chartrand 將代表能源與自然資源部長 Hodgson 發布一項潔淨能源資金公告。",
+   tags:["潔淨電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/minister-chartrand-to-make-clean-energy-announcement.html"},
+  {region:"加拿大",date:"2026-06-19",source:"加拿大自然資源部",
+   title:"Idlout 議員將為努納武特發布潔淨能源公告",
+   orig:"MP Idlout to make clean energy announcement for Nunavut",
+   summary:"努納武特國會議員 Lori Idlout 將代表能源與自然資源部長 Hodgson 發布潔淨能源資金公告。",
+   tags:["潔淨電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/mp-idlout-to-make-clean-energy-announcement-for-nunavut.html"},
+  {region:"加拿大",date:"2026-06-11",source:"加拿大自然資源部",
+   title:"加拿大將與IEA於蒙特婁合辦全球能源效率大會",
+   orig:"Media accreditation now open: IEA Global Conference on Energy Efficiency in Montreal",
+   summary:"能源部長 Hodgson、環境部長 Dabrusin 與國際能源總署（IEA）署長 Fatih Birol 將於6月29–30日在蒙特婁與魁北克水電合辦第11屆IEA全球能源效率大會。",
+   tags:["能源效率","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/media-accreditation-now-open-iea-global-conference-on-energy-efficiency-in-montreal.html"},
+  {region:"加拿大",date:"2026-06-11",source:"加拿大自然資源部",
+   title:"加拿大投資首份全國地熱能路線圖",
+   orig:"Canada invests in its first national geothermal energy roadmap",
+   summary:"能源部長 Hodgson 透過能源創新計畫撥款46.8萬加元，支持由加拿大深層地熱聯盟（CDGC）主導的全國深層地熱路線圖計畫。",
+   tags:["地熱","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/canada-invests-in-its-first-national-geothermal-energy-roadmap.html"},
+  {region:"加拿大",date:"2026-06-08",source:"加拿大自然資源部",
+   title:"Hodgson 部長將在2026全球能源展發表主題演講",
+   orig:"Minister Hodgson to deliver keynote at the 2026 Global Energy Show",
+   summary:"能源與自然資源部長 Hodgson 將在2026全球能源展（Global Energy Show）發表主題演講。",
+   tags:["能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/minister-hodgson-to-deliver-keynote-at-the-2026-global-energy-show.html"},
+  {region:"加拿大",date:"2026-06-08",source:"加拿大自然資源部",
+   title:"Hogan 政務次長將談北美能源優勢",
+   orig:"PS Hogan to discuss North America's energy advantage",
+   summary:"政務次長 Hogan 將就北美的能源優勢發表談話。",
+   tags:["能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/ps-hogan-to-discuss-north-americas-energy-advantage.html"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大自然資源部",
+   title:"加拿大投資1500萬加元於薩斯喀徹溫省最大太陽能專案之一",
+   orig:"The Government of Canada invests $15 million in one of Saskatchewan's largest solar projects",
+   summary:"加拿大政府投資1500萬加元，支持薩斯喀徹溫省規模最大的太陽能專案之一。",
+   tags:["太陽能","電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/the-government-of-canada-invests-15-million-in-one-of-saskatchewans-largest-solar-projects.html"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大環境與氣候變遷部",
+   title:"世界環境日：環境、氣候變遷與自然部長 Dabrusin 聲明",
+   orig:"World Environment Day: Statement from the Honourable Julie Dabrusin",
+   summary:"環境、氣候變遷與自然部長 Julie Dabrusin 發表世界環境日聲明，強調當下的選擇將形塑留給後代的地球。",
+   tags:["環境","氣候"],
+   link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/world-environment-day-statement-from-the-honourable-julie-dabrusin-minister-of-the-environment-climate-change-and-nature.html"},
+  {region:"加拿大",date:"2026-06-04",source:"加拿大自然資源部",
+   title:"加拿大啟動森林部門行動計畫",
+   orig:"Canada launches Forest Sector Action Plan",
+   summary:"加拿大啟動「森林部門行動計畫」，支持林業與自然資源永續發展。",
+   tags:["自然資源","環境"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/canada-launches-forest-sector-action-plan.html"},
+  {region:"加拿大",date:"2026-06-03",source:"加拿大環境與氣候變遷部",
+   title:"Dabrusin 與 Michel 部長紀念加拿大潔淨空氣日",
+   orig:"Minister Dabrusin and Minister Michel mark Clean Air Day in Canada",
+   summary:"環境部長 Dabrusin 與衛生部長 Michel 發表聲明，紀念加拿大潔淨空氣日。",
+   tags:["環境","氣候"],
+   link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/minister-dabrusin-and-minister-michel-mark-clean-air-day-in-canada.html"},
+  {region:"加拿大",date:"2026-06-02",source:"加拿大自然資源部",
+   title:"Duguid 議員將為薩省大型太陽能設施動土發布公告",
+   orig:"MP Duguid to make announcement at groundbreaking for major solar facility in Saskatchewan",
+   summary:"國會議員 Duguid 將在薩斯喀徹溫省一座大型太陽能設施動土典禮上發布公告。",
+   tags:["太陽能","電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/mp-duguid-to-make-announcement-at-groundbreaking-for-major-solar-facility-in-saskatchewan.html"},
+  {region:"加拿大",date:"2026-06-02",source:"加拿大自然資源部",
+   title:"加拿大與韓國深化能源資源與關鍵礦產合作",
+   orig:"Canada and the Republic of Korea deepen co-operation on energy resources and critical minerals",
+   summary:"加拿大與韓國深化在能源資源與關鍵礦產領域的合作。",
+   tags:["能源","關鍵礦產"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/canada-and-the-republic-of-korea-deepen-co-operation-on-energy-resources-and-critical-minerals.html"},
+  {region:"加拿大",date:"2026-06-02",source:"加拿大自然資源部",
+   title:"加拿大投資紐芬蘭與拉布拉多能源產業",
+   orig:"Canada invests in Newfoundland and Labrador's energy sector",
+   summary:"加拿大政府投資紐芬蘭與拉布拉多省的能源產業。",
+   tags:["能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/canada-invests-in-newfoundland-and-labradors-energy-sector.html"},
+
+  // ===== 政府新聞（近48小時、能源相關）=====
+  {region:"歐盟",date:"2026-06-23",source:"歐盟執委會",
+   title:"多國政府就啟動「Electrify Now（立即電氣化）」發表聯合聲明",
+   orig:"Governments' Joint Statement on the launch of Electrify Now",
+   summary:"歐盟執委會與多國政府發表聯合聲明，啟動「Electrify Now」倡議，推動加速電氣化以強化能源安全與淨零轉型。",
+   tags:["電力","能源","淨零"],
+   link:"https://ec.europa.eu/commission/presscorner/detail/en/statement_26_1419"},
+  {region:"瑞士",date:"2026-06-23",source:"瑞士聯邦能源局 BFE",
+   title:"新進口車輛CO2排放明顯下降",
+   orig:"Importeure neuer Fahrzeuge senken CO2-Emissionen deutlich",
+   summary:"瑞士聯邦能源局（BFE）指出，2025年瑞士新進口車輛CO2排放明顯下降，乘用車平均降至約101.6克/公里、較前一年低約11%，主因電動車占比上升；但仍未達CO2目標值。",
+   tags:["運輸","電動車","能源","氣候"],
+   link:"https://www.admin.ch/de/newnsb/Fr7Zcz8GPtKzQ6snXZAXU"},
+  {region:"美國",date:"2026-06-23",source:"美國能源部 DOE",
+   title:"美國能源部宣布「美國核能供應鏈貸款」",
+   orig:"Department of Energy Announces American Nuclear Supply Chain Loans",
+   summary:"美國能源部宣布提供貸款以支持美國核能供應鏈，由能源主導融資辦公室與核能辦公室主辦。",
+   tags:["核能","能源"],
+   link:"https://www.energy.gov/articles/department-energy-announces-american-nuclear-supply-chain-loans"},
+  {region:"美國",date:"2026-06-22",source:"美國能源部 DOE",
+   title:"美國能源部尋求將過剩鈽轉化為核燃料",
+   orig:"Department of Energy Seeks to Transform Surplus Plutonium into Nuclear Fuel",
+   summary:"美國能源部核能辦公室尋求將過剩的鈽轉化為核燃料。",
+   tags:["核能","能源"],
+   link:"https://www.energy.gov/ne/articles/department-energy-seeks-transform-surplus-plutonium-nuclear-fuel"},
+  {region:"法國",date:"2026-06-22",source:"Vie publique（法國政府）",
+   title:"生態規劃：推出追蹤生態轉型的新指標儀表板",
+   orig:"Planification écologique : un nouveau baromètre pour suivre la transition écologique",
+   summary:"法國推出生態規劃儀表板，匯整250項量化指標以追蹤生態轉型進度，圍繞法國6大環境目標與6大產業部門（含能源）。",
+   tags:["氣候","能源","環境"],
+   link:"https://www.vie-publique.fr/en-bref/303750-250-indicateurs-pour-suivre-la-transition-ecologique"},
+
+  // ===== 英國 DESNZ（能源安全與淨零部）=====
+  {region:"英國",date:"2026-06-17",source:"英國能源安全與淨零部 DESNZ",
+   title:"加強保障以重建家庭對住宅升級的信任",
+   orig:"Greater protections to restore families' trust in home upgrades",
+   summary:"英國政府採取行動保護能源市場中的家庭，並要求住宅節能改造（retrofit）產業負起責任、提升品質。",
+   tags:["能源效率","能源"],
+   link:"https://www.gov.uk/government/news/greater-protections-to-restore-families-trust-in-home-upgrades"},
+  {region:"英國",date:"2026-06-16",source:"英國能源安全與淨零部 DESNZ",
+   title:"更多家庭可透過插電式太陽能板享受更低電費",
+   orig:"More families to benefit from lower bills through plug-in panels",
+   summary:"零售商加入政府計畫，將插電式太陽能板引進英國家庭，協助家庭節省電費。",
+   tags:["太陽能","電力","能源"],
+   link:"https://www.gov.uk/government/news/more-families-to-benefit-from-lower-bills-through-plug-in-panels"},
+  {region:"英國",date:"2026-06-15",source:"英國能源安全與淨零部 DESNZ",
+   title:"政府支持助英國勞斯萊斯 SMR 拿下數十億英鎊瑞典核能出口合約",
+   orig:"Government backing helps UK's Rolls-Royce SMR win multibillion-pound Sweden nuclear export contract",
+   summary:"勞斯萊斯 SMR 獲瑞典開發商 Videberg Kraft 選定在瑞典建造小型模組化反應爐（SMR），為英國贏得數十億英鎊出口大單。",
+   tags:["核能","SMR","能源"],
+   link:"https://www.gov.uk/government/news/government-backing-helps-uks-rolls-royce-smr-win-multibillion-pound-sweden-nuclear-export-contract"},
+  {region:"英國",date:"2026-06-05",source:"英國能源安全與淨零部 DESNZ",
+   title:"企業同意強化潔淨能源勞工權益",
+   orig:"Companies agree to stronger workers' rights in clean energy",
+   summary:"離岸風電供應鏈企業與工會支持政府的「離岸風電公平工作憲章」，強化勞工權益。",
+   tags:["離岸風電","能源"],
+   link:"https://www.gov.uk/government/news/companies-agree-to-stronger-workers-rights-in-clean-energy"},
+  {region:"英國",date:"2026-06-04",source:"英國能源安全與淨零部 DESNZ",
+   title:"以社區電池降低電費的新提案",
+   orig:"New proposals to cut bills with community batteries",
+   summary:"英國政府提出新提案，讓家庭與企業可透過社區電池（共享儲能）享受更便宜的電力。",
+   tags:["儲能","電力","能源"],
+   link:"https://www.gov.uk/government/news/new-proposals-to-cut-bills-with-community-batteries"},
+
+  // ===== World Nuclear News（核能政策；連結至專區）=====
+  {region:"國際",date:"2026-06-23",source:"World Nuclear News",
+   title:"加拿大力求擴大核能與鈾產能（本土與海外）",
+   orig:"Canada aims to grow nuclear and uranium capacity, at home and abroad",
+   summary:"加拿大政府發布首份全國核能策略，勾勒新核電建設、擴大鈾生產與強化供應鏈的願景，朝「能源超級大國」目標邁進。",
+   tags:["核能","鈾","能源"],
+   link:"https://world-nuclear-news.org/nuclear-policies#canada-nuclear-uranium"},
+  {region:"國際",date:"2026-06-18",source:"World Nuclear News",
+   title:"愛沙尼亞國會通過新核能法",
+   orig:"Estonia's Parliament passes new nuclear energy law",
+   summary:"愛沙尼亞《核能與安全法》訂出部署核能的關鍵步驟，包括核電廠選址、興建、測試、運轉、除役與核廢料最終處置規則。",
+   tags:["核能","能源"],
+   link:"https://world-nuclear-news.org/nuclear-policies#estonia-nuclear-law"},
+  {region:"國際",date:"2026-06-17",source:"World Nuclear News",
+   title:"瑞典國會通過將鈾礦開採重新分類",
+   orig:"Sweden's Parliament approves reclassification of uranium mining",
+   summary:"瑞典國會通過修法，簡化鈾礦開採與加工的許可程序，比照其他金屬與礦物；並開放更多沿海地點供潛在核電專案使用。",
+   tags:["核能","鈾","能源"],
+   link:"https://world-nuclear-news.org/nuclear-policies#sweden-uranium-mining"},
+  {region:"國際",date:"2026-06-15",source:"World Nuclear News",
+   title:"薩斯喀徹溫省與捷克擬合作發展 SMR 與 MMR",
+   orig:"Saskatchewan, Czech Republic aim to cooperate on SMRs and MMRs",
+   summary:"加拿大薩斯喀徹溫省與捷克簽署備忘錄，推動包括小型模組化反應爐（SMR）與微型模組化反應爐（MMR）等潔淨能源方案的合作。",
+   tags:["核能","SMR","能源"],
+   link:"https://world-nuclear-news.org/nuclear-policies#saskatchewan-czech-smr"},
+  {region:"國際",date:"2026-06-05",source:"World Nuclear News",
+   title:"日本提議汰換最多14座核子反應爐",
+   orig:"Japan proposes replacement of up to 14 nuclear reactors",
+   summary:"日本經濟產業省提出草案目標：在2040年代汰換最多5座屆退反應爐，2050年代再汰換11至14座。",
+   tags:["核能","能源"],
+   link:"https://world-nuclear-news.org/nuclear-policies#japan-replace-reactors"},
+
+  // ===== 歐盟能源總署（DG ENER）=====
+  {region:"歐盟",date:"2026-06-19",source:"歐盟執委會能源總署",
+   title:"Better Homes Partnerships：徵求意向書",
+   orig:"Better Homes Partnerships: Call for expressions of interest launched",
+   summary:"歐盟執委會在「Better Homes Partnerships」倡議下徵求意向書，尋找可加速全歐負擔得起、高品質住宅翻新的具體計畫與可複製方案。",
+   tags:["能源效率","建築","能源"],
+   link:"https://energy.ec.europa.eu/news/better-homes-partnerships-call-expressions-interest-launched-2026-06-19_en"},
+  {region:"歐盟",date:"2026-06-18",source:"歐盟執委會能源總署",
+   title:"生質甲烷機制：媒合買賣雙方",
+   orig:"Biomethane Mechanism: Connecting buyers and sellers",
+   summary:"歐盟執委會正式啟動「生質甲烷機制」，作為歐盟能源與原物料平台下的自願、免費工具，加速歐洲生質甲烷市場成長。",
+   tags:["生質甲烷","能源"],
+   link:"https://energy.ec.europa.eu/news/biomethane-mechanism-connecting-buyers-and-sellers-2026-06-18_en"},
+  {region:"歐盟",date:"2026-06-15",source:"歐盟執委會能源總署",
+   title:"埃及與歐盟攜手投入6.9億歐元潔淨能源電網投資",
+   orig:"Egypt and EU join forces on €690 million clean-energy grid investment",
+   summary:"埃及與歐盟深化再生能源戰略夥伴關係，提供最高6.9億歐元融資，升級並擴建埃及電網。",
+   tags:["電網","再生能源","能源"],
+   link:"https://north-africa-middle-east-gulf.ec.europa.eu/news/egypt-and-eu-join-forces-eu690-million-clean-energy-grid-investment-2026-06-15_en"},
+  {region:"歐盟",date:"2026-06-10",source:"歐盟執委會能源總署／Eurostat",
+   title:"Eurostat：歐盟家庭能源使用連續3年下降",
+   orig:"Eurostat: Energy use in EU households drops for 3 years in a row",
+   summary:"據 Eurostat，2024年歐盟家庭使用能源954萬兆焦耳，較2023年的957萬兆焦耳略降0.2%。",
+   tags:["統計","能源"],
+   link:"https://ec.europa.eu/eurostat/web/products-eurostat-news/w/ddn-20260610-2"},
+
+  // ===== Clean Energy Wire（德國能源轉型新聞）=====
+  {region:"德國",date:"2026-06-22",source:"Clean Energy Wire",
+   title:"德國電池儲能快速成長，規則調整可釋放更大潛力（太陽能業界）",
+   orig:"Battery storage growing fast in Germany, higher potential through rule changes – solar industry",
+   summary:"德國太陽能業界指出，德國電池儲能快速成長，若調整相關規則可釋放更大潛力。",
+   tags:["儲能","太陽能","能源"],
+   link:"https://www.cleanenergywire.org/news/battery-storage-growing-fast-germany-higher-potential-through-rule-changes-solar-industry"},
+  {region:"德國",date:"2026-06-19",source:"Clean Energy Wire",
+   title:"風電業界與工會呼籲德國加開離岸風電標案，因石油巨頭恐退出",
+   orig:"Wind industry, unions call for extra German offshore auctions given risk of oil majors' opt-out",
+   summary:"由於石油巨頭可能退出，德國風電業界與工會呼籲政府加開額外的離岸風電標案，以維持開發動能。",
+   tags:["離岸風電","能源"],
+   link:"https://www.cleanenergywire.org/news/wind-industry-unions-call-extra-german-offshore-auctions-given-risk-oil-majors-opt-out"},
+  {region:"德國",date:"2026-06-19",source:"Clean Energy Wire",
+   title:"國會學術專家服務處：德國規劃的潔淨暖氣規則恐違憲",
+   orig:"Parliament's scientific expert service says Germany's planned clean heating rules may violate constitution",
+   summary:"德國國會學術專家服務處指出，政府規劃的潔淨暖氣（heating）規則可能牴觸憲法。",
+   tags:["暖氣","能源"],
+   link:"https://www.cleanenergywire.org/news/parliaments-scientific-expert-service-says-germanys-planned-clean-heating-rules-may-violate-constitution"},
+
+  // ===== 韓國政府（MCEE 氣候能源環境部、MOTIR 產業通商部）=====
+  {region:"韓國",date:"2026-06-24",source:"韓國氣候能源環境部",
+   title:"為輸電用儲能系統導入提升電網穩定性的 Grid-forming 技術",
+   orig:"송전용 에너지저장장치에 전력망의 안정성을 높이는 그리드포밍 기술 도입",
+   summary:"韓國氣候能源環境部宣布為輸電用儲能系統（ESS）導入 Grid-forming（組網型）技術，以提升電力系統的穩定性。",
+   tags:["儲能","電網","電力","能源"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18598"},
+  {region:"韓國",date:"2026-06-24",source:"韓國氣候能源環境部",
+   title:"高階放射性廢棄物：強化溝通建立信任，向海外先進國業者與居民取經",
+   orig:"고준위방폐물, 소통 강화로 신뢰 모색… 해외 선도국 사업자와 주민에게 듣는다",
+   summary:"韓國就高階放射性廢棄物（核廢料）管理強化溝通，向海外先進國的業者與當地居民取經，以建立社會信任。",
+   tags:["核能","能源"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18597"},
+  {region:"韓國",date:"2026-06-24",source:"韓國氣候能源環境部",
+   title:"（參考）韓國參與全球電氣化合作平台「Electrify Now」倡議啟動",
+   orig:"(참고) 한국, 글로벌 전기화 협력 플랫폼 「전기화, 지금(Electrify Now)」 이니셔티브 출범에 참여",
+   summary:"韓國參與全球電氣化合作平台「Electrify Now（立即電氣化）」倡議的啟動，與各國共同推動加速電氣化。",
+   tags:["電力","能源","淨零"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18594"},
+  {region:"韓國",date:"2026-06-23",source:"韓國氣候能源環境部",
+   title:"探討電氣安全與技術創新，舉辦「SETIC 2026」",
+   orig:"전기안전과 기술혁신 논의… ‘세틱(SETIC) 2026’ 개최",
+   summary:"韓國氣候能源環境部舉辦「SETIC 2026」，聚焦電氣安全與技術創新的討論。",
+   tags:["電力","能源"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18591"},
+  {region:"韓國",date:"2026-06-23",source:"韓國氣候能源環境部",
+   title:"歐盟碳邊境調整機制（CBAM）加速實施，支援我國企業強化因應能力",
+   orig:"유럽연합 탄소국경조정제도 이행 가속화… 우리 기업 대응역량 강화 지원",
+   summary:"因應歐盟碳邊境調整機制（CBAM）加速實施，韓國政府提供支援以強化企業的因應能力。",
+   tags:["氣候","能源","政策"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18589"},
+  {region:"韓國",date:"2026-06-22",source:"韓國產業通商部",
+   title:"產業部長官造訪首家「平價好油站」表達鼓勵",
+   orig:"(참고자료)1호 ‘착하디착한 주유소’ 산업부 장관 격려 방문",
+   summary:"韓國產業通商部長官造訪第1號「平價好油站（착하디착한 주유소）」，鼓勵其以較低油價回饋消費者。",
+   tags:["油價","能源"],
+   link:"https://www.motir.go.kr/kor/article/ATCL3f49a5a8c#29842"},
+
+  // ===== 2026-06-24 新增 =====
+  // --- 日本情資 RSS ---
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"關西電力送配電研究鐵塔工程建機自動駕駛，目標減少四成作業人力",
+   orig:"関西電力送配電、鉄塔工事で建機の自動運転を研究 作業員4割減狙う",
+   summary:"關西電力送配電研究在輸電鐵塔工程導入工程機械自動駕駛，目標減少約四成現場作業人力，以因應人手短缺。",
+   tags:["電力","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUC233XB0T20C26A6000000/"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"Panasonic電工與鹿兒島縣日置市締結脫碳協定",
+   orig:"パナソニックエレクトリックワークス、鹿児島県日置市と脱炭素協定",
+   summary:"Panasonic Electric Works與鹿兒島縣日置市締結脫碳合作協定，推動地方淨零與再生能源。",
+   tags:["淨零","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOJC240L00U6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"經濟產業省",
+   title:"Global Startup EXPO 2026（GSE2026）先行公布部分出席講者",
+   orig:"Global Startup EXPO 2026（GSE2026）の登壇者を一部先行発表しました",
+   summary:"日本經濟產業省於10月在大阪舉辦的深科技全球新創活動「Global Startup EXPO 2026」開幕100天前，先行公布部分預定出席講者。",
+   tags:["能源"],
+   link:"https://www.meti.go.jp/press/2026/06/20260624005/20260624005.html"},
+  {region:"日本",date:"2026-06-24",source:"朝日新聞",
+   title:"IAEA事務局長：福島廢爐目標「合理」，並提及對伊朗核查察",
+   orig:"福島の廃炉目標「合理的」 IAEA事務局長、イラン核査察にも言及",
+   summary:"IAEA事務局長葛羅西表示福島第一核電廠的廢爐目標「合理」，並提及將對伊朗實施核查察。",
+   tags:["核能","能源"],
+   link:"http://www.asahi.com/articles/ASV6S13ZGV6SUGTB006M.html?ref=rss"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"IAEA事務局長：福島核燃料殘渣「需詳細分析」，肯定處理水排放",
+   orig:"福島原発デブリ「詳細な分析必要」 IAEA事務局長、処理水放出は評価",
+   summary:"IAEA事務局長指福島核電廠燃料殘渣（debris）需要詳細分析，同時肯定日本處理水排放的作法。",
+   tags:["核能","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUA240FO0U6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／BSN新潟放送",
+   title:"核電重啟：東電拠出1000億日圓，花角知事將向自治體首長說明分配",
+   orig:"原発再稼働 東電拠出金1000億円 自治体トップに配分説明 花角知事「丁寧に意見集約したい」",
+   summary:"伴隨核電重啟，東京電力拠出1000億日圓，新潟縣知事花角英世表示將向自治體首長說明分配並謹慎彙整意見，新潟縣考慮以300億日圓補貼電費。",
+   tags:["核能","電力","能源"],
+   link:"https://news.yahoo.co.jp/articles/c5c6830d2e82cc1461b245e7c13adb945ad87108?source=rss"},
+  {region:"日本",date:"2026-06-24",source:"經濟產業省",
+   title:"公布智財權、技術訣竅與資料適當交易之優越地位濫用等指針及契約書範本",
+   orig:"「知的財産権・ノウハウ・データの適切な取引のための優越的地位の濫用等に関する指針」及び「契約書ひな形」を公表します",
+   summary:"日本經濟產業省（中小企業廳、特許廳）與公正交易委員會聯名公布智財權、技術訣竅與資料適當交易之優越地位濫用等指針及契約書範本，強化交易適正化。",
+   tags:["能源"],
+   link:"https://www.meti.go.jp/press/2026/06/20260624003/20260624003.html"},
+  {region:"日本",date:"2026-06-24",source:"經濟產業省",
+   title:"依受託中小企業振興法修正「振興基準」",
+   orig:"受託中小企業振興法に基づく「振興基準」を改正しました",
+   summary:"日本經濟產業省依受託中小企業振興法修正振興基準，進一步落實價格轉嫁與交易適正化。",
+   tags:["能源"],
+   link:"https://www.meti.go.jp/press/2026/06/20260624001/20260624001.html"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"IAEA事務局長：對伊朗核查察「必定實施」，時期「近期開始」",
+   orig:"イランへの核査察「必ず実施」 IAEA事務局長、時期は「近く開始」",
+   summary:"IAEA事務局長葛羅西表示，對伊朗的核查察「必定實施」，並稱將於近期開始。",
+   tags:["核能","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUA240WL0U6A620C2000000/"},
+
+  // --- 韓國情資 RSS ---
+  {region:"韓國",date:"2026-06-24",source:"能源經濟新聞",
+   title:"以天然氣將CO2轉化為高附加價值原料，瓦斯公社與全南大開發整合製程技術",
+   orig:"천연가스로 CO₂를 고부가 원료 전환…가스公·전남대, 공정기술 개발",
+   summary:"韓國瓦斯公社與全南大學羅慶秀教授團隊開發出在無氫氣條件下利用天然氣（甲烷）將二氧化碳轉化為甲醇、醋酸等高附加價值含氧碳化合物的整合製程與觸媒技術。",
+   tags:["甲烷","能源","淨零"],
+   link:"https://www.ekn.kr/web/view.php?key=20260624020526122"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"韓中召開第10屆FTA技術性貿易障礙（TBT）委員會緊密溝通",
+   orig:"한·중, 무역기술장벽(TBT) 완화 위해 긴밀히 소통",
+   summary:"韓國國家技術標準院與中國召開第10屆韓中FTA技術性貿易障礙（TBT）委員會，就鋰電池國家標準修訂等業界疑慮溝通，盼減輕企業負擔、促進出口。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299478"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"石油管理院大田世宗忠南本部建立產學合作模式、培育現場專業人力",
+   orig:"석유관리원 대전세종충남본부, 산학 협력 모델 정립 · 현장 맞춤형 전문 인력 양성",
+   summary:"韓國石油管理院大田世宗忠南本部與天安工業高中締結教育支援協約，結合石油及替代燃料專業與油品分析基礎設施，培育淨零時代現場專業人力。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299477"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"能源技術評價院經營評鑑連續兩年獲A級",
+   orig:"에기평, 공공기관 경영평가 ‘2년 연속 A등급’",
+   summary:"韓國能源技術評價院以主導能源技術研發、統籌氣候科技產業育成戰略等表現，連續兩年於公共機關經營評鑑獲最高等A級。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299473"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"國會研討會探討「K-電池再躍進」產業戰略",
+   orig:"국회 토론회서 ‘K-배터리 재도약’ 논의",
+   summary:"韓國電池產業協會於國會主辦研討會，討論因應全球市場變化的電池產業戰略；發表者指出需求正由電動車轉向ESS與AI資料中心，並倡議引進「直接退稅型稅額扣抵」。",
+   tags:["儲能","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299476"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"政府為輸電用BESS導入Grid-forming性能要件",
+   orig:"정부, 송전용 BESS에 그리드포밍 성능요건 도입",
+   summary:"韓國氣候能源環境部為輸電用儲能系統（BESS）制定並導入Grid-forming（組網型）性能要件，以補強因再生能源擴大而弱化的電網穩定性，先適用於中央契約市場長週期BESS。",
+   tags:["儲能","電網","電力","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299475"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"「2026越南環境能源產業展」開幕",
+   orig:"‘2026 베트남 환경·에너지산업전’ 개막",
+   summary:"「2026越南環境能源產業展（ENTECH Vietnam 2026）」於河內開幕，為韓國企業參與最多的越南產業展；越南計畫2030年前將再生能源占比擴大至47%，韓國發電公企業組Team Korea參展。",
+   tags:["能源","核能"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299469"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"Grid-forming導入正式啟動，先適用長週期BESS",
+   orig:"그리드포밍 도입 본격화…장주기 BESS부터 적용",
+   summary:"韓國氣候能源環境部正式啟動Grid-forming技術導入，性能要件將適用於2027年12月起商轉的中央契約市場長週期BESS（2027~2029年合計約1680MW），以強化再生能源中心電網的穩定性。",
+   tags:["儲能","電力","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299472"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"高階放射性廢棄物國際研討會25日登場",
+   orig:"고준위방폐물 국제토론회 25일 개최",
+   summary:"韓國高階放射性廢棄物管理委員會與原子力環境公團舉辦第9屆放射性廢棄物安全管理國際研討會（SaRam 2026），邀日、加、法、瑞典、瑞士、芬蘭6國機構與選址地居民代表分享化解衝突與建立信任經驗。",
+   tags:["核能","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299474"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"空調壓縮機加速朝「環保、高效率」重組",
+   orig:"에어컨 컴프레서, '친환경·고효율'로 급속 재편",
+   summary:"市調機構FMI預估全球空調壓縮機市場將由2025年300億美元擴大至2036年513億美元，能源效率標準強化與R290等環保冷媒轉換是主要推力。",
+   tags:["能源","氣候"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299471"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"三星電子服務家電售後部門連續兩年獲國家服務大賞",
+   orig:"삼성전자서비스, 가전 AS 부문 2년 연속 국가서비스대상 수상",
+   summary:"三星電子服務以AI事前照護與客製化管理方案，連續兩年於家電售後（AS）部門獲國家服務大賞。",
+   tags:["能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299468"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"中國推進擴大進口俄羅斯Arctic LNG 2產量",
+   orig:"중국, 러시아 Arctic LNG 2 물량 수입 확대 추진",
+   summary:"據路透，中國山東龍口新建LNG接收站預計10月前啟用，將擴大進口受美國制裁的俄羅斯Arctic LNG 2產量；中國近10個月已進口約260萬噸、約佔該專案年設計產能16%。",
+   tags:["LNG","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299467"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"CATL在保加利亞建置602MWh BESS，擴展東歐ESS市場",
+   orig:"CATL, 불가리아 최대 602MWh BESS 구축…동유럽 ESS 시장 확대",
+   summary:"中國電池企業CATL與保加利亞Solarpro合作，在Burgas建置602MWh儲能系統並併入國家電網，為保加利亞最大ESS、提升全國儲能容量約一成。",
+   tags:["儲能","電力","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299463"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"月城核電本部透過核電溝通委員會分享地方溝通成果",
+   orig:"월성원자력본부, 원전소통위원회 통해 지역 소통 활동 성과 공유",
+   summary:"韓水原月城核電本部召開2026年第2次核電溝通委員會，分享低收入家庭配菜支援、插秧育苗支援、溫排水養殖魚苗放流等地方支援與溝通成果。",
+   tags:["核能","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103264"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"韓電KDN連續4年獲國家服務大賞，展現能源雲端領先角色",
+   orig:"한전KDN, 국가서비스대상 수상 ‘4년 연속 영예’…에너지 클라우드 부문 선도적 역할 입증",
+   summary:"能源ICT公企業韓電KDN以符合國家保安體系的主權雲端平台K-ECP營運成果，連續4年獲國家服務大賞能源雲端服務部門大賞。",
+   tags:["能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103263"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"西部發電以校園太陽能發電收益用於獎學事業",
+   orig:"서부발전, 학교 태양광발전 수익 창출해 장학사업에 활용한다",
+   summary:"韓國西部發電與中等校長協議會締約，利用全國國高中閒置空間擴大校園太陽能發電，並將部分收益用於獎學事業，打造再生能源體驗教育環境。",
+   tags:["太陽能","電力","能源","淨零"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103262"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"導入可Grid-forming的長週期BESS，可望強化電網穩定",
+   orig:"그리드포밍 가능한 장주기 BESS 도입…전력망 안정화 효과 기대",
+   summary:"韓國氣候能源環境部正式導入Grid-forming技術，性能要件適用於2027年12月起商轉的中央契約市場長週期BESS，使儲能除充放電外亦能提供慣量、強健性等電網穩定功能。",
+   tags:["儲能","電力","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103261"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"高階放廢委員會舉辦SaRam 2026，探討地方溝通與信任建立",
+   orig:"고준위위원회, ‘SaRam 2026’ 연다…지역사회 소통·신뢰 구축방안 모색",
+   summary:"韓國高階放射性廢棄物管理委員會與原子力環境公團舉辦第9屆放射性廢棄物安全管理國際研討會（SaRam 2026），邀芬蘭、日、加、法、瑞典、瑞士等國機構與選址地代表分享溝通與信任建立經驗。",
+   tags:["核能","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103260"},
+
+  // --- 加拿大 Atom（環境與自然資源）---
+  {region:"加拿大",date:"2026-06-23",source:"加拿大自然資源部",
+   title:"背景資料：加拿大政府投資卑詩省、育空與西北地區潔淨電力",
+   orig:"Backgrounder: The Government of Canada invests in clean electricity in British Columbia, Yukon and the Northwest Territories",
+   summary:"加拿大能源與自然資源部長Hodgson於2026年6月23日宣布逾1600萬加元、支持卑詩省、育空與西北地區5項潔淨能源基礎設施計畫之背景資料。",
+   tags:["潔淨電力","電力","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/backgrounder-the-government-of-canada-invests-in-clean-electricity-in-british-columbia-yukon-and-the-northwest-territories.html"},
+  {region:"加拿大",date:"2026-06-23",source:"加拿大自然資源部",
+   title:"加拿大與西北地區將舉行媒體說明會",
+   orig:"Canada and the Northwest Territories to hold media availability",
+   summary:"加拿大政府與西北地區政府將就相關能源與資源議題舉行媒體說明會。",
+   tags:["能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/canada-and-the-northwest-territories-to-hold-media-availability.html"},
+  {region:"加拿大",date:"2026-06-22",source:"加拿大自然資源部",
+   title:"Hodgson部長強調啟動全國糧食安全策略",
+   orig:"Minister Hodgson highlights launch of National Food Security Strategy",
+   summary:"加拿大能源與自然資源部長Hodgson強調政府啟動全國糧食安全策略。",
+   tags:["自然資源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/minister-hodgson-highlights-launch-of-national-food-security-strategy.html"},
+
+  // --- 韓國產業通商部 MOTIR ---
+  {region:"韓國",date:"2026-06-23",source:"韓國產業通商部",
+   title:"加速因應歐盟CBAM，支援我國企業強化對應能力",
+   orig:"EU CBAM 이행 가속화, 우리 기업 대응역량 강화 지원",
+   summary:"韓國產業通商部因應歐盟碳邊境調整機制（CBAM）加速實施，提供支援以強化國內企業的對應能力。",
+   tags:["氣候","能源","政策"],
+   link:"https://www.motir.go.kr/kor/article/ATCL3f49a5a8c#29844"},
+
+  // ===== 2026-06-25 新增 =====
+  // --- 日本情資 RSS ---
+  {region:"日本",date:"2026-06-25",source:"產經新聞",
+   title:"電力9社今日召開股東大會，東電提新體制案、股東接連提「脫核」提案",
+   orig:"電力9社きょう株主総会 東京電力は新体制案を諮る、株主から「脱原発」などの提案相次ぐ",
+   summary:"東京電力等9大電力公司25日各自召開股東大會，多名股東提出停止核電重啟、脫核等提案；中部電力因浜岡核電廠耐震設計資料造假面臨經營責任，董事選任議案受關注。",
+   tags:["核能","電力","能源"],
+   link:"https://www.sankei.com/article/20260625-2YJN7PJBDVMSJPUWTIBAIZ4QRA/"},
+  {region:"日本",date:"2026-06-25",source:"日本經濟新聞",
+   title:"九州電力擬2027年轉控股公司體制，強化再生能源與海外、核電汰換成焦點",
+   orig:"九州電力、再エネや海外強化へ27年HD体制に 原発建て替えも焦点",
+   summary:"九州電力規劃2027年轉為控股公司（HD）體制以強化再生能源與海外事業，核電廠汰換（建て替え）亦成為焦點。",
+   tags:["核能","電力","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOJC19BW60Z10C26A6000000/"},
+  {region:"日本",date:"2026-06-25",source:"日本經濟新聞",
+   title:"日航與東北大學新創在山形機場實證新型生質燃料",
+   orig:"JALや東北大学発新興、山形空港で新タイプのバイオ燃料を実証",
+   summary:"日本航空（JAL）與東北大學衍生新創在山形機場展開新型生質航空燃料的實證測試。",
+   tags:["能源","運輸"],
+   link:"https://www.nikkei.com/article/DGXZQOCC2395H0T20C26A6000000/"},
+  {region:"日本",date:"2026-06-25",source:"日本經濟新聞",
+   title:"核電設計階段即納入反恐對策，規制委為「汰換時代」整備規則",
+   orig:"原発設計段階からテロ対策 規制委「建て替え時代」へルール整備",
+   summary:"日本原子力規制委員會著手整備新規則，要求核電廠自設計階段即納入反恐對策，因應核電廠汰換（建て替え）時代到來。",
+   tags:["核能","電力","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUA225PT0S6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"新潟日報",
+   title:"東電1千億日圓拠出金：200億用於強化除排雪，新潟縣26日公布分配案",
+   orig:"東電1千億円拠出金、除排雪体制強化に200億円 県が配分案を26日にも公表へ",
+   summary:"伴隨柏崎刈羽核電廠重啟，東京電力約10年內向新潟縣拠出1千億日圓，縣方擬安全防災約400億、電費補助與地方產業振興各約300億，其中200億用於強化除排雪體制，26日左右公布。",
+   tags:["核能","電力","能源"],
+   link:"https://www.niigata-nippo.co.jp/articles/-/855286"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"JERA研議重啟燃煤電力販售，因應中東情勢為企業提供較低價電",
+   orig:"JERA、石炭火力電力の販売再開を検討 中東情勢受け企業向けに安く",
+   summary:"日本JERA因中東情勢推升燃料價格，研議重啟燃煤火力電力的販售，向企業提供較便宜的電力。",
+   tags:["電力","能源","油價"],
+   link:"https://www.nikkei.com/article/DGXZQOUC244XO0U6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／UX新潟",
+   title:"柏崎刈羽核電重啟「回饋」1000億日圓，新潟縣向相關方說明用途案",
+   orig:"【柏崎刈羽原発】再稼働の見返り「1000億円」県が関係者に使い道案を説明【新潟】",
+   summary:"作為柏崎刈羽核電廠重啟回饋，東京電力今後10年向新潟縣拠出1000億日圓；縣方向自民黨縣連與縣市長會說明用途案，安全防災對策約400億，將於6月縣議會提案。",
+   tags:["核能","電力","能源"],
+   link:"https://news.livedoor.com/article/detail/31644313/"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"三菱重工系企業於茨城東海村發生火災、電纜變色",
+   orig:"三菱重工系、茨城･東海村で火災 ケーブルが変色",
+   summary:"三菱重工旗下企業在茨城縣東海村的設施發生火災，電纜出現變色。",
+   tags:["核能","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOCC249XA0U6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"朝日新聞",
+   title:"規制委將核電審查改為兩階段，地震與海嘯先行「認定」",
+   orig:"規制委、原発審査を2段階に変更へ 地震・津波は先行して「認定」",
+   summary:"日本原子力規制委員會擬將核電廠審查改為兩階段制，先就地震與海嘯（耐震、耐津波）部分先行認定，以因應核電汰換時代。",
+   tags:["核能","電力","能源"],
+   link:"http://www.asahi.com/articles/ASV6S315DV6SUTFL005M.html?ref=rss"},
+  {region:"日本",date:"2026-06-24",source:"朝日新聞",
+   title:"JERA探尋以燃煤火力抑制電費，因中東情勢惡化燃料高漲",
+   orig:"電気代抑制に石炭火力活用 中東情勢悪化の燃料高騰でJERA模索",
+   summary:"因中東情勢惡化導致燃料價格高漲，日本JERA探尋活用燃煤火力以抑制電費。",
+   tags:["電力","能源","油價"],
+   link:"http://www.asahi.com/articles/ASV6S362ZV6SULFA010M.html?ref=rss"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／BSN新潟放送",
+   title:"核電重啟東電拠出1000億，花角知事向自治體首長說明分配、400億用於安全防災",
+   orig:"原発再稼働 東電拠出金1000億円 自治体トップに配分説明 花角知事「丁寧に意見集約したい」",
+   summary:"伴隨核電重啟，東京電力拠出1000億日圓，新潟縣知事花角英世24日向自治體首長說明用途，擬以400億用於核電周邊安全防災對策，並表示將謹慎彙整意見。",
+   tags:["核能","電力","能源"],
+   link:"https://news.yahoo.co.jp/articles/6ed9d08000e63758e3597223a149d290dfa788f2?source=rss"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"三菱商事等80家企業組新團體，盼以CO2移除創出數兆日圓市場",
+   orig:"三菱商事など80社、CO2除去で数兆円市場創出 政府提言へ新団体",
+   summary:"三菱商事等約80家企業成立新團體，盼透過二氧化碳移除（CDR）創出數兆日圓規模市場，並向政府提出政策建言。",
+   tags:["能源","淨零"],
+   link:"https://www.nikkei.com/article/DGXZQOUC19C2O0Z10C26A6000000/"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／UX新潟電視21",
+   title:"柏崎刈羽核電重啟回饋1000億日圓，縣向相關方說明用途案（UX新潟電視21）",
+   orig:"【柏崎刈羽原発】再稼働の見返り「1000億円」県が関係者に使い道案を説明【新潟】 - UX新潟テレビ21",
+   summary:"同則新聞之 Google 新聞轉載：柏崎刈羽核電廠重啟回饋的1000億日圓，新潟縣向相關方說明用途案。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMixAJBVV95cUxNTjlVVFRTWEhQeEdYbU5PdU83NXd5OGVfZ2FPS2VDWHFfLWFhZjBQcUxPakk0THNzR05yTnFWYk04MXAyaU43b0daV1lqQmtySFdWSWhHTjRTSWsyVTdoMFFtdTdOMkNVNXNpdEdBRVVYdE1pd1gtVWxqZHVQeXVNSW1jNURsektIRlQ5SVlwSVE3amRjUFdvcGNaSzROR05TTkN0a1N4c1dhUmlQY25HMVpva00xY2FJNl9GQW5ZSXpXWkcwM1hrT2lDdV93SHpSV3lfQXNFVUM4di1qMENMWC1PZk5IMHpGa2d0NEg4TUlVZzZSRDQxbkRQZnFCWXcyVlF6RjZFTUNMbS1Ra1dSeFBZeFdZdGVycl8tM1dVVVhvUC1JNnBJcGdBbmk1X2lmNFdrNTBtVlJzRTJabkpvWHBTMUk?oc=5"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／Yahoo新聞",
+   title:"核電重啟東電拠出1000億，花角知事向自治體首長說明分配（BSN新潟放送）",
+   orig:"原発再稼働 東電拠出金1000億円 自治体トップに配分説明 花角知事「丁寧に意見集約したい」（ＢＳＮ新潟放送）",
+   summary:"同則新聞之 Google 新聞／Yahoo 轉載：核電重啟東電拠出1000億日圓，花角知事向自治體首長說明分配，400億擬用於安全防災。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMif0FVX3lxTFB3THMwdlA1LXVjYktlZHNVN3prc01GQ2xVLW93eTV0anpOZm1Ld3hQc0Judm0zMHF1NkRBNEJHWlgwSEV3TDNRMTN1Yk5JQ0hTdUpBLTI3TWJZRGhkQVA2cTY3ckFvRlZycmEtanRlR1I0RlppX0RuMHJXQ1hsRTA?oc=5"},
+  {region:"日本",date:"2026-06-24",source:"NHK",
+   title:"核電重啟東電1000億日圓拠出金，新潟縣彙整活用案、26日擬簽確認書",
+   orig:"原発再稼働に伴う東電の1000億円拠出金 活用案まとまる",
+   summary:"伴隨柏崎刈羽核電廠6號機重啟，東京電力今後約10年向新潟縣拠出總額1000億日圓，縣方已彙整資金活用案，預計26日與東電簽署資金拠出確認書。",
+   tags:["核能","電力","能源"],
+   link:"https://news.web.nhk/newsweb/na/nb-1030036959"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／NHK新聞",
+   title:"核電重啟東電1000億日圓拠出金，活用案彙整完成（NHK）",
+   orig:"原発再稼働に伴う東電の１０００億円拠出金 活用案まとまる - NHKニュース",
+   summary:"同則新聞之 Google 新聞轉載：核電重啟伴隨的東電1000億日圓拠出金，新潟縣活用案彙整完成。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMiWEFVX3lxTE1zclhMSnF2cEJfcURIQXpKVTM1VzEtc19IeWJhdVdVMHhiZURFOGM5cGVBcnJSX1ltc0hXU09RUzExZERxQkNEdjNiSm5wc1RvekluSW5EdzA?oc=5"},
+  {region:"日本",date:"2026-06-24",source:"日本經濟新聞",
+   title:"丸紅對加拿大銅探勘公司追加出資2億日圓，對象礦區擴大三成",
+   orig:"丸紅、カナダ銅探鉱会社に2億円追加出資 対象鉱区も3割拡大",
+   summary:"日本丸紅對一家加拿大銅礦探勘公司追加出資2億日圓，並將對象礦區擴大約三成，強化關鍵礦產布局。",
+   tags:["關鍵礦產","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUC2449S0U6A620C2000000/"},
+  {region:"日本",date:"2026-06-24",source:"經濟產業省",
+   title:"公布「勞動供給制約社會中堅・中小企業『獲利能力』強化戰略」",
+   orig:"「労働供給制約社会における中堅・中小企業の「稼ぐ力」強化戦略」を公表します",
+   summary:"日本中小企業廳公布「勞動供給制約社會中堅・中小企業『獲利能力』強化戰略」，因應人力供給受限下強化企業競爭力。",
+   tags:["能源"],
+   link:"https://www.meti.go.jp/press/2026/06/20260624004/20260624004.html"},
+  {region:"日本",date:"2026-06-24",source:"日本核電重啟／新潟日報",
+   title:"「安全沒有終點」東電原子力改革監視委員會提最終報告，評估柏崎刈羽6號機重啟過程",
+   orig:"「安全に終わりはない」東京電力原子力改革監視委員会が最終報告書 柏崎刈羽原発6号機再稼働までのプロセス評価",
+   summary:"東京電力原子力改革監視委員會提出最終報告書，以「安全沒有終點」評估柏崎刈羽核電廠6號機重啟前的改革過程。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMiXkFVX3lxTE9PY1pjMWc2YV9HTzhTOEEyb1ZhejdpTGh5VTE2eHF4QkUweUpCbV9mMmlHNVY0NG9HYzM5bVdkZDFuM3pBbURfTkNLWUpxVjRSUUdvVnA2S0czTzd4REE?oc=5"},
+  {region:"日本",date:"2026-06-24",source:"產經新聞",
+   title:"新潟知事：電費補助對應「核電30公里圈內」，1000億拠出金用途",
+   orig:"新潟知事、電気料金補助「原発30キロ圏内」に対応 東電の拠出金1000億円の使途めぐり",
+   summary:"新潟縣知事花角英世表示，東電因柏崎刈羽核電廠6號機重啟拠出的1000億日圓基金，電費補助將對應「核電30公里圈內」，將聽取市町村意見並經縣議會討論後定案。",
+   tags:["核能","電力","能源"],
+   link:"https://www.sankei.com/article/20260624-YU3FOZNHSBLW5IGBV35CMPJWYM/"},
+
+  // --- 韓國情資 RSS ---
+  {region:"韓國",date:"2026-06-25",source:"能源經濟新聞",
+   title:"國際油價中東戰爭後首次跌破70美元，補庫存需求恐再推升",
+   orig:"국제유가, 중동 전쟁 이후 첫 70달러 하회…재고보충 수요에 재반등 전망도",
+   summary:"因荷莫茲海峽通航恢復、滯留油輪陸續駛向需求國，WTI 收69.89美元、為2月底中東戰爭爆發以來首次跌破70美元；但EIA預估補庫存需求將使布蘭特油6、7月均價達105美元、Q4約89美元。",
+   tags:["油價","能源"],
+   link:"https://www.ekn.kr/web/view.php?key=20260625024066339"},
+  {region:"韓國",date:"2026-06-25",source:"能源平台新聞",
+   title:"溫室氣體中心因應國際氣候統計體系轉換，舉辦特別研討會",
+   orig:"온실가스센터, 국제 기후 통계 체계 전환 대응 방안 모색",
+   summary:"韓國溫室氣體綜合資訊中心於韓國氣候變遷學會學術大會舉辦論壇，因應IPCC新統計計算基準，圍繞短期停留氣候物質、碳捕捉利用封存、土地利用與林業三大主題，提升國家溫室氣體統計可信度。",
+   tags:["淨零","統計","氣候","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103275"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"韓國環境公團獲中小企業部中小・公共合作優良案例",
+   orig:"한국환경공단, 중기부 중소·공공 협력 우수사례 선정",
+   summary:"韓國環境公團以「以官民One-Team突破海外認證壁壘」案例，獲中小企業部2026年第1次Win-Win Honors優良案例；協助國內水企業取得美國NSF、英國WRAS認證並出口日本。",
+   tags:["能源","環境"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299491"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"環境保全院為環境保健敏感族群辦巡迴教育",
+   orig:"환경보전원, 환경보건 민감계층 위한 교육 시행",
+   summary:"韓國環境保全院於慶北高靈、慶南昌寧，對353名兒童與長者等環境保健敏感族群實施「到府環境保健教育」，宣導生活中環境有害因子的預防。",
+   tags:["環境","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299492"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"全球先導企業協會宣示擴散產業園區出口企業生產性金融",
+   orig:"글로벌선도기업협회, 수출기업 생산적 금융 확산 선포",
+   summary:"韓國產業園區公團與全球先導企業協會（GLCA）舉行委員會成立式暨產業園區出口企業生產性金融擴散宣示式，將擴大ESG、製造AI轉型與淨零領域合作及金融投資支援。",
+   tags:["淨零","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299493"},
+  {region:"韓國",date:"2026-06-24",source:"Today Energy",
+   title:"韓國環境公團獲公共機關創新案例競賽優秀獎",
+   orig:"한국환경공단, 혁신사례 경진대회 우수상",
+   summary:"韓國環境公團以「為循環經濟生態系建構官民合作再生原料管理體系」成果，於2026公共機關創新案例競賽永續創新領域獲優秀獎，助推循環經濟與淨零。",
+   tags:["淨零","環境","能源"],
+   link:"https://www.todayenergy.kr/news/articleView.html?idxno=299494"},
+  {region:"韓國",date:"2026-06-24",source:"韓國公民參與／每日勞動新聞",
+   title:"造船業社會對話「在即」，金屬工會決定參與",
+   orig:"조선업종 사회적 대화 ‘눈앞’",
+   summary:"韓國金屬工會23日中央執行委員會決定參與造船業社會對話，由僱用勞動部次官主持，產業通商部與經社勞委一同參與，議題涵蓋產業安全與人力結構改革。",
+   tags:["公民參與"],
+   link:"https://www.labortoday.co.kr/news/articleView.html?idxno=235312"},
+  {region:"韓國",date:"2026-06-24",source:"能源新聞",
+   title:"尋求電網轉換與設備安全解方，「SETIC 2026」揭幕",
+   orig:"전력망 전환·설비안전 해법 찾는다...막 올린 ‘SETIC 2026’",
+   summary:"大韓電氣產業聯合會與氣候能源環境部24日於釜山開幕「SETIC 2026」（電氣設備技術基準研討會），聚焦HVDC／MVDC、卡諾電池、電氣火災預防等，因應再生能源擴大下的電網轉換與電氣安全。",
+   tags:["電力","電網","能源"],
+   link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226344"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"南東發電舉行「KOEN大學生志工團」成立式",
+   orig:"남동발전, ‘KOEN 대학생봉사단’ 발대식…지역사회 나눔활동 ‘박차’",
+   summary:"韓國南東發電與慶南社福協議會舉行第10期KOEN大學生志工團成立式，30名大學生將於約6個月間在地方兒童中心進行弱勢兒童學習輔導等社會貢獻活動。",
+   tags:["能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103274"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"原子力環境公團分享核廢料核種分析最新研究與技術",
+   orig:"원자력환경공단, 방폐물 핵종분석 최신 연구 성과·기술 노하우 공유",
+   summary:"韓國原子力環境公團於慶州處置設施內放射性廢棄物分析中心，邀約50名國內核種分析專家舉辦放射化學分析技術交流會，分享解體廢棄物核種庫存評估與廢棄物升級利用等技術。",
+   tags:["核能","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103273"},
+  {region:"韓國",date:"2026-06-24",source:"Business Post 氣候能源",
+   title:"LG化學著手以二氧化碳生產永續航空燃料的技術實證",
+   orig:"LG화학, 이산화탄소로 지속가능항공유 생산 기술 실증 착수",
+   summary:"韓國LG化學著手進行以二氧化碳生產永續航空燃料（SAF）的技術實證。",
+   tags:["能源","淨零","運輸"],
+   link:"https://www.businesspost.co.kr/BP?command=article_view&num=440782"},
+  {region:"韓國",date:"2026-06-24",source:"能源平台新聞",
+   title:"電力需求與再生能源劇增促電力產業大變革，籲設立「電力監督院」",
+   orig:"“전력수요·재생에너지 급증에 전력산업 대대적 변화…전력감독원 설치해야”",
+   summary:"電氣委員會委員長金昌燮於SETIC 2026指出，半導體等尖端產業使電力需求激增、逆變器型再生能源擴大導致電網不穩，主張設立由專家組成的「電力監督院」以技術判斷與監督電網運轉與市場。",
+   tags:["電力","電網","能源"],
+   link:"https://www.e-platform.net/news/articleView.html?idxno=103272"},
+  {region:"韓國",date:"2026-06-24",source:"能源時報",
+   title:"南東發電第10期大學生志工團正式啟動",
+   orig:"남동발전 제10기 대학생봉사단 출범",
+   summary:"韓國南東發電24日於本社（慶南晉州）舉行第10期KOEN大學生志工團成立式，30名大學生未來6個月將以地方兒童中心為主，進行弱勢兒童學習輔導與照護支援。",
+   tags:["能源"],
+   link:"https://www.energytimes.kr/news/articleView.html?idxno=70262"},
+  {region:"韓國",date:"2026-06-24",source:"能源時報",
+   title:"【社論】比發電公企業整併更重要的事",
+   orig:"[사설] 발전공기업 통합보다 중요한 것",
+   summary:"社論指出，政府研議發電公企業整併的背景在能源轉型；隨再生能源占比上升，需抽蓄、電池、氫能等提供電網彈性的資源，關鍵在如何認定彈性資源價值並建立補償機制，否則整併恐淪為承擔成本的組織。",
+   tags:["氫能","電力","儲能","能源"],
+   link:"https://www.energytimes.kr/news/articleView.html?idxno=70261"},
+
+  // --- 加拿大 Atom（環境與自然資源）---
+  {region:"加拿大",date:"2026-06-24",source:"加拿大自然資源部",
+   title:"Hogan 政務次長出席全國糧食安全策略發布",
+   orig:"PS Hogan highlights launch of National Food Security Strategy",
+   summary:"能源與自然資源部政務次長 Corey Hogan 代表農業與農業食品部長，在亞伯達省卡加利出席全國糧食安全策略（National Food Security Strategy）的發布。",
+   tags:["自然資源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/ps-hogan-highlights-launch-of-national-food-security-strategy.html"},
+  {region:"加拿大",date:"2026-06-24",source:"加拿大自然資源部",
+   title:"能源與自然資源部長 Hodgson：核能策略發布演說",
+   orig:"The Honourable Tim Hodgson, Minister of Energy and Natural Resources: Launch of the Nuclear Energy Strategy",
+   summary:"加拿大能源與自然資源部長 Tim Hodgson 就「全國核能策略」發布發表演說，勾勒新核電建設、擴大鈾生產與強化供應鏈、邁向能源超級大國的願景。",
+   tags:["核能","鈾","能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/the-honourable-tim-hodgson-minister-of-energy-and-natural-resources-launch-of-the-nuclear-energy.html"},
+  {region:"加拿大",date:"2026-06-24",source:"加拿大自然資源部",
+   title:"Hogan 政務次長將在亞伯達省發布能源資金公告",
+   orig:"PS Hogan to announce energy funding in Alberta",
+   summary:"能源與自然資源部政務次長 Corey Hogan 將在亞伯達省發布資金公告，協助創造就業、減少排放並支持能源創新。",
+   tags:["能源"],
+   link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/ps-hogan-to-announce-energy-funding-in-alberta.html"},
+
+  // --- 英國 DESNZ ---
+  {region:"英國",date:"2026-06-24",source:"英國能源安全與淨零部 DESNZ",
+   title:"政府已確保1000億英鎊潔淨能源投資",
+   orig:"Government has secured £100 billion of clean energy investment",
+   summary:"英國能源大臣宣布，政府已確保1000億英鎊的民間潔淨能源投資。",
+   tags:["潔淨電力","能源","淨零"],
+   link:"https://www.gov.uk/government/news/government-has-secured-100-billion-of-clean-energy-investment"},
+  {region:"英國",date:"2026-06-24",source:"英國能源安全與淨零部 DESNZ",
+   title:"更多油氣業勞工將獲就業支援",
+   orig:"More oil and gas workers to be supported into jobs",
+   summary:"英國將為蘇格蘭更多石油與天然氣業勞工提供量身打造的技能支援，協助其轉入能源等成長部門的優質工作。",
+   tags:["能源"],
+   link:"https://www.gov.uk/government/news/more-oil-and-gas-workers-to-be-supported-into-jobs"},
+
+  // --- 美國 DOE ---
+  {region:"美國",date:"2026-06-24",source:"美國能源部 DOE",
+   title:"美國、卡達、奈及利亞、阿爾及利亞警告：歐盟甲烷新規恐擾亂歐洲油氣供應",
+   orig:"U.S., Qatar, Nigeria, and Algeria Warn Proposed E.U. Methane Regulations Could Disrupt Europe's Oil and Gas Supply",
+   summary:"美國能源部與卡達、奈及利亞、阿爾及利亞致函歐盟執委會、理事會與成員國領袖，警告歐盟擬議的甲烷法規恐擾亂歐洲的石油與天然氣供應。",
+   tags:["甲烷","LNG","能源"],
+   link:"https://www.energy.gov/listings/energy-news#us-qatar-nigeria-algeria-eu-methane"},
+
+  // --- 歐盟能源總署 ---
+  {region:"歐盟",date:"2026-06-24",source:"歐盟執委會能源總署",
+   title:"執委會簡化能源與輪胎標示規則，提升消費者可近用性",
+   orig:"Commission simplifies and makes energy and tyre labelling rules more accessible to European consumers",
+   summary:"歐盟執委會提案簡化家電、電子設備與輪胎的能源標示（energy labelling）規則，讓歐洲消費者、供應商與零售商更易理解與運用。",
+   tags:["能源效率","能源"],
+   link:"https://energy.ec.europa.eu/news_en#energy-tyre-labelling-2026-06-24"},
+  {region:"歐盟",date:"2026-06-24",source:"歐盟執委會能源總署",
+   title:"歐盟於倫敦氣候行動週：攜手擴大電氣化、減少甲烷排放",
+   orig:"EU at the London Climate Action Week: Joining forces to expand electrification and reduce methane emissions",
+   summary:"在第8屆倫敦氣候行動週上，歐盟執委會支持下達成多項國際里程碑，聚焦擴大電氣化與減少甲烷排放。",
+   tags:["電力","甲烷","淨零","能源"],
+   link:"https://energy.ec.europa.eu/news_en#london-climate-action-week-2026-06-24"},
+  {region:"歐盟",date:"2026-06-24",source:"歐盟執委會能源總署",
+   title:"呼籲現有與潛在捐助者挹注烏克蘭能源支援基金",
+   orig:"Joint call on current and prospective donors to contribute to the Ukraine Energy Support Fund",
+   summary:"過去四年G7+國家透過烏克蘭能源支援基金挹注19.5億歐元，強化烏克蘭能源韌性；現有資源已全數分配，歐盟呼籲現有與潛在捐助者繼續貢獻。",
+   tags:["能源","電力"],
+   link:"https://energy.ec.europa.eu/news_en#ukraine-energy-support-fund-2026-06-24"},
+
+  // --- 韓國氣候能源環境部 MCEE（官方公告板）---
+  {region:"韓國",date:"2026-06-25",source:"韓國氣候能源環境部",
+   title:"因應國際氣候統計體系轉換，溫室氣體中心與氣候變遷學會研商對策",
+   orig:"국제 기후 통계 체계 전환 대응을 위해 온실가스센터-기후변화학회 머리 맞댄다",
+   summary:"韓國氣候能源環境部所屬溫室氣體綜合資訊中心於韓國氣候變遷學會學術大會舉辦特別論壇，因應IPCC新統計計算基準，討論提升國家溫室氣體統計可信度與2035減量目標的因應方案。",
+   tags:["淨零","統計","氣候","能源"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18600"},
+  {region:"韓國",date:"2026-06-25",source:"能源平台新聞",title:"中東油價急漲納入戰爭不安成本，民官協作發揮效果",orig:"전쟁 불안 비용까지 포함된 중동발 유가 급등 속 민관 공조 빛나",summary:"報導指出，中東局勢使油價急升並反映戰爭風險成本，韓國民間與政府合作在供需與價格穩定上展現作用。",tags:["油價","能源"],link:"https://www.e-platform.net/news/articleView.html?idxno=103280"},
+  {region:"韓國",date:"2026-06-25",source:"能源平台新聞",title:"LPG與乙烷船舶燃料標準將義務化，IGC Code 2028年大幅修訂",orig:"LPG·에탄 선박연료 기준 의무화...IGC Code 2028년 대폭 개정",summary:"國際液化氣體散裝運輸規則預計在2028年大幅修訂，將把LPG與乙烷作為船舶燃料的相關標準納入義務規範。",tags:["LNG","運輸","能源"],link:"https://www.e-platform.net/news/articleView.html?idxno=103277"},
+  {region:"韓國",date:"2026-06-25",source:"能源平台新聞",title:"杜拜原油價格回落至戰爭前水準",orig:"두바이유 가격, 전쟁 이전 수준까지 하락",summary:"報導指出杜拜原油價格已回落至戰爭前水準，顯示中東風險溢價暫時降溫。",tags:["油價","能源"],link:"https://www.e-platform.net/news/articleView.html?idxno=103278"},
+  {region:"韓國",date:"2026-06-25",source:"能源平台新聞",title:"首爾能源公社擴大辦理「到校能源體驗學校」",orig:"서울에너지공사, ‘찾아가는 에너지체험학교’ 확대 운영",summary:"首爾能源公社將擴大到校能源體驗課程，強化學生與社區的能源教育。",tags:["能源","公民參與"],link:"https://www.e-platform.net/news/articleView.html?idxno=103276"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"忠南AX創新委員會成立，規劃1兆韓元規模國家級事業",orig:"충남AX혁신위원회 발족…1조원 규모 국책사업 기획",summary:"忠清南道成立AX創新委員會，將規劃約1兆韓元規模的國家級事業，推動區域產業與數位轉型。",tags:["能源"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226352"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"百貨店2026年6月品牌評價：樂天、現代、新世界居前",orig:"백화점 2026년 6월 브랜드평판...롯데백화점, 현대백화점, 신세계백화점 順",summary:"韓國品牌評價研究公布2026年6月百貨店品牌評價，樂天百貨、現代百貨與新世界百貨排名居前。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226351"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"拉麵2026年6月品牌評價：辛拉麵、火雞麵、炸醬麵居前",orig:"라면 2026년 6월 브랜드평판...신라면, 불닭볶음면, 짜파게티 順",summary:"韓國品牌評價研究公布2026年6月拉麵品牌評價，辛拉麵、火雞麵與炸醬麵排名居前。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226350"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"韓國基礎自治團體2026年6月品牌評價：瑞草、松坡、江南居前",orig:"대한민국 기초자치단체 2026년 6월 브랜드평판...서초구, 송파구, 강남구 順",summary:"韓國基礎自治團體品牌評價顯示，2026年6月以瑞草區、松坡區與江南區排名領先。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226349"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"債券2026年6月品牌評價：未來資產證券、韓國投資證券、韓國產業銀行居前",orig:"채권 2026년 6월 브랜드평판...미래에셋증권, 한국투자증권, 한국산업은행 順",summary:"2026年6月債券品牌評價中，未來資產證券、韓國投資證券與韓國產業銀行排名居前。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226348"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"保證保險2026年6月品牌評價：信用保證基金、住宅都市保證公社、技術保證基金居前",orig:"보증보험 2026년 6월 브랜드평판...신용보증기금, 주택도시보증공사, 기술보증기금 順",summary:"2026年6月保證保險品牌評價中，信用保證基金、住宅都市保證公社與技術保證基金排名居前。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226347"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"健康機能食品上市企業2026年6月品牌評價：KT&G、LG生活健康、HK inno.N居前",orig:"건강기능식품 상장기업 2026년 6월 브랜드평판...KT&G, LG생활건강, HK이노엔 順",summary:"健康機能食品上市企業品牌評價顯示，2026年6月以KT&G、LG生活健康與HK inno.N排名領先。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226346"},
+  {region:"韓國",date:"2026-06-25",source:"能源新聞",title:"生物工程上市企業2026年6月品牌評價：Alteogen、ABL Bio、Peptron居前",orig:"생물공학 상장기업 2026년 6월 브랜드평판...알테오젠, 에이비엘바이오, 펩트론 順",summary:"2026年6月生物工程上市企業品牌評價中，Alteogen、ABL Bio與Peptron排名居前。",tags:["統計"],link:"https://www.energy-news.co.kr/news/articleView.html?idxno=226345"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大政府",title:"加拿大環境與氣候變遷部發布夏季季節展望",orig:"Environment and Climate Change Canada presents summer seasonal outlook",summary:"加拿大環境與氣候變遷部發布夏季季節展望，說明未來季節天氣與氣候風險趨勢。",tags:["氣候","環境"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/environment-and-climate-change-canada-presents-summer-seasonal-outlook.html"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大政府",title:"加拿大環境週期間，環境損害基金支持12項自然保育與復育新計畫",orig:"During Canadian Environment Week, Canada’s Environmental Damages Fund supports 12 new nature conservation and restoration projects",summary:"加拿大環境損害基金在加拿大環境週期間宣布支持12項新的自然保育與復育計畫。",tags:["環境","自然資源"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/during-canadian-environment-week-canadas-environmental-damages-fund-supports-12-new-nature-conservation-and-restoration-projects0.html"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大政府",title:"霍奇森部長將出席蒙特婁外交關係委員會論壇",orig:"Minister Hodgson to participate in the Montreal Council on Foreign Relations forum",summary:"加拿大自然資源部長霍奇森將參與蒙特婁外交關係委員會論壇，討論自然資源與國際合作相關議題。",tags:["自然資源","能源"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/06/minister-hodgson-to-participate-in-the-montreal-council-on-foreign-relations-forum.html"},
+  {region:"加拿大",date:"2026-06-05",source:"加拿大政府",title:"加拿大環境週期間，環境損害基金支持12項自然保育與復育新計畫",orig:"During Canadian Environment Week, Canada’s Environmental Damages Fund supports 12 new nature conservation and restoration projects",summary:"加拿大政府宣布以環境損害基金支持12項自然保育與復育新計畫，協助改善受影響生態系。",tags:["環境","自然資源"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/during-canadian-environment-week-canadas-environmental-damages-fund-supports-12-new-nature-conservation-and-restoration-projects.html"},
+  {region:"加拿大",date:"2026-06-04",source:"加拿大政府",title:"加拿大政府官員將就今夏季節性天氣展望舉行媒體說明",orig:"Government of Canada officials to hold a media availability on this summer’s seasonal weather outlook",summary:"加拿大政府官員將舉行媒體說明，介紹今夏季節性天氣展望與相關氣候資訊。",tags:["氣候","環境"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/06/government-of-canada-officials-to-hold-a-media-availability-on-this-summers-seasonal-weather-outlook.html"},
+  {region:"加拿大",date:"2026-05-28",source:"加拿大政府",title:"加拿大環境與氣候變遷部推出AI天氣模型，強化劇烈天氣預報",orig:"Environment and Climate Change Canada launches AI weather model to strengthen forecasting for severe weather",summary:"加拿大環境與氣候變遷部推出AI天氣模型，以提升劇烈天氣預報能力與預警品質。",tags:["氣候","環境"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/05/environment-and-climate-change-canada-launches-ai-weather-model-to-strengthen-forecasting-for-severe-weather.html"},
+  {region:"加拿大",date:"2026-05-26",source:"加拿大政府",title:"霍奇森部長將宣布液化天然氣相關消息",orig:"Minister Hodgson to make liquefied natural gas announcement",summary:"加拿大自然資源部長霍奇森預定宣布液化天然氣相關事項，涉及能源與天然氣產業發展。",tags:["LNG","能源"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/minister-hodgson-to-make-liquefied-natural-gas-announcement0.html"},
+  {region:"加拿大",date:"2026-05-26",source:"加拿大政府",title:"加拿大政府紀念 Smiths Falls 新人行橋剪綵",orig:"Government of Canada marks ribbon cutting of new pedestrian bridge in Smiths Falls",summary:"加拿大政府宣布 Smiths Falls 新人行橋剪綵，屬地方基礎建設與社區連通改善。",tags:["環境"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/government-of-canada-marks-ribbon-cutting-of-new-pedestrian-bridge-in-smiths-falls.html"},
+  {region:"加拿大",date:"2026-05-22",source:"加拿大政府",title:"2026國際生物多樣性日：環境、氣候變遷與自然部長 Julie Dabrusin 聲明",orig:"International Day for Biological Diversity 2026: Statement from the Honourable Julie Dabrusin, Minister of the Environment, Climate Change and Nature",summary:"加拿大環境、氣候變遷與自然部長就2026年國際生物多樣性日發表聲明，強調自然保育與氣候行動。",tags:["環境","自然資源","氣候"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/05/international-day-for-biological-diversity-2026-statement-from-the-honourable-julie-dabrusin-minister-of-the-environment-climate-change-and-nature.html"},
+  {region:"加拿大",date:"2026-05-22",source:"加拿大政府",title:"加拿大政府協助民眾為即將到來的颶風季做準備",orig:"Government of Canada prepares Canadians for upcoming hurricane season",summary:"加拿大政府提醒民眾為即將到來的颶風季做準備，並強化氣候風險與災害應變資訊。",tags:["氣候","環境"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/05/government-of-canada-prepares-canadians-for-upcoming-hurricane-season.html"},
+  {region:"加拿大",date:"2026-05-20",source:"加拿大政府",title:"加拿大投資北極基礎建設，推動關鍵礦產進入市場並強化北方社區",orig:"Canada invests in Arctic infrastructure to bring critical minerals to market and strengthen Northern communities",summary:"加拿大宣布投資北極基礎建設，協助關鍵礦產進入市場並強化北方社區韌性。",tags:["關鍵礦產","自然資源"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/canada-invests-in-arctic-infrastructure-to-bring-critical-minerals-to-market-and-strengthen-northern-communities.html"},
+  {region:"加拿大",date:"2026-05-20",source:"加拿大政府",title:"加拿大環境與氣候變遷部發布2026年颶風季展望",orig:"Environment and Climate Change Canada presents the 2026 hurricane season outlook",summary:"加拿大環境與氣候變遷部發布2026年颶風季展望，提供颶風活動與氣候風險預測。",tags:["氣候","環境"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/05/environment-and-climate-change-canada-presents-the-2026-hurricane-season-outlook.html"},
+  {region:"加拿大",date:"2026-05-19",source:"加拿大政府",title:"加拿大政府標誌 Hope Bay 礦場動工",orig:"Government of Canada marks groundbreaking at Hope Bay Mine",summary:"加拿大政府宣布 Hope Bay 礦場動工，涉及北方礦業、自然資源與區域經濟發展。",tags:["自然資源","關鍵礦產"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/government-of-canada-marks-groundbreaking-at-hope-bay-mine.html"},
+  {region:"加拿大",date:"2026-05-18",source:"加拿大政府",title:"加拿大投資北方社區的北極基礎建設",orig:"Canada invests in Arctic infrastructure in northern communities",summary:"加拿大宣布投資北方社區的北極基礎建設，支援自然資源開發與社區韌性。",tags:["自然資源","關鍵礦產"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/canada-invests-in-arctic-infrastructure-in-northern-communities.html"},
+  {region:"加拿大",date:"2026-05-16",source:"加拿大政府",title:"ArcelorMittal 加拿大礦業公司因違反《漁業法》遭罰1億加元",orig:"ArcelorMittal Exploitation Minière Canada s.e.n.c. fined $100 million for violating the Fisheries Act through illegal deposits of deleterious substances",summary:"ArcelorMittal 加拿大礦業公司因非法排放有害物質、違反《漁業法》遭罰1億加元。",tags:["環境","自然資源"],link:"https://www.canada.ca/en/environment-climate-change/news/2026/05/arcelormittal-exploitation-miniere-canada-senc-fined-100-million-for-violating-the-fisheries-act-through-illegal-deposits-of-deleterious-substances.html"},
+  {region:"加拿大",date:"2026-05-15",source:"加拿大政府",title:"加拿大政府將在努納武特宣布礦業相關事項",orig:"Government of Canada to make a mining announcement in Nunavut",summary:"加拿大政府預告將在努納武特宣布礦業相關事項，涉及北方自然資源與礦產開發。",tags:["自然資源","關鍵礦產"],link:"https://www.canada.ca/en/natural-resources-canada/news/2026/05/government-of-canada-to-make-a-mining-announcement-in-nunavut.html"},
+  {region:"歐盟",date:"2026-06-24",source:"歐盟能源總署",title:"執委會簡化能源與輪胎標示規則，讓歐洲消費者更易取得資訊",orig:"Commission simplifies and makes energy and tyre labelling rules more accessible to European consumers",summary:"歐盟執委會提出簡化標示規則，讓家電、電子設備與輪胎的能源與效率資訊更容易被消費者、供應商與零售商使用。",tags:["能源效率","能源"],link:"https://ec.europa.eu/commission/presscorner/detail/en/ip_26_1388"},
+  {region:"歐盟",date:"2026-06-24",source:"歐盟能源總署",title:"歐盟參與倫敦氣候行動週，攜手擴大電氣化並減少甲烷排放",orig:"EU at the London Climate Action Week: Joining forces to expand electrification and reduce methane emissions",summary:"歐盟執委會支持倫敦氣候行動週期間的重要國際里程碑，推動擴大電氣化並降低甲烷排放。",tags:["氣候","甲烷","電力"],link:"https://energy.ec.europa.eu/news/eu-london-climate-action-week-joining-forces-expand-electrification-and-reduce-methane-emissions-2026-06-24_en"},
+  {region:"歐盟",date:"2026-06-24",source:"歐盟能源總署",title:"共同呼籲現有與潛在捐助者投入烏克蘭能源支援基金",orig:"Joint call on current and prospective donors to contribute to the Ukraine Energy Support Fund",summary:"G7+國家過去四年已透過能源共同體秘書處管理的烏克蘭能源支援基金投入19.5億歐元，協助強化烏克蘭能源韌性。",tags:["能源","電網"],link:"https://energy.ec.europa.eu/news/joint-call-current-and-prospective-donors-contribute-ukraine-energy-support-fund-2026-06-24_en"},
+  {region:"歐盟",date:"2026-06-23",source:"歐盟能源總署",title:"加拿大與歐盟就聯合國秘書長甲烷行動呼籲發表共同聲明",orig:"Canada and the European Union Joint Statement on the United Nations Secretary-General, António Guterres' Call to Action on Methane",summary:"加拿大與歐盟強調，削減各部門甲烷排放是限制近期升溫最快且具成本效益的方法之一，並有助改善空氣品質。",tags:["甲烷","氣候"],link:"https://energy.ec.europa.eu/news/canada-and-european-union-joint-statement-united-nations-secretary-general-antonio-guterres-call-2026-06-23_en"},
+  {region:"國際",date:"2026-06-23",source:"World Nuclear News",title:"加拿大提出擴大國內外核能與鈾產能的目標",orig:"Canada aims to grow nuclear and uranium capacity, at home and abroad",summary:"加拿大首份國家核能策略提出新建核能機組、擴大鈾生產並強化供應鏈的願景，支撐其成為能源超級大國的企圖。",tags:["核能","鈾","能源"],link:"https://world-nuclear-news.org/nuclear-policies#canada-aims-grow-nuclear-uranium-capacity"},
+  {region:"韓國",date:"2026-06-25",source:"韓國氣候能源環境部",
+   title:"即便預測今夏電力需求創歷史新高，仍全力確保穩定供電",
+   orig:"올여름 역대 최대전력수요 전망에도 안정적인 전력수급에 총력",
+   summary:"韓國氣候能源環境部表示，雖預估今夏電力需求將創歷史新高，政府將透過供需管理與確保備用容量等措施全力維持電力穩定供應。",
+   tags:["電力","能源"],
+   link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18601"},
+  {region:"韓國",date:"2026-06-25",source:"韓國產業通商部",
+   title:"從「中東戰爭」記取教訓，官民共商穩固的產業與資源安全戰略",
+   orig:"‘중동 전쟁’의 교훈, 견고한 산업·자원안보 확보 전략을 민관이 함께 모색한다",
+   summary:"韓國產業通商部以中東戰爭為教訓，召集官民共同研商強化產業與資源（能源）安全的因應戰略，提升供應鏈韌性。",
+   tags:["能源","關鍵礦產"],
+   link:"https://www.motir.go.kr/kor/article/ATCL3f49a5a8c#29853"},
+  {region:"韓國",date:"2026-06-25",source:"韓國能源經濟研究院 KEEI",
+   title:"西部發電強化燃煤電廠除役因應支援體系",
+   orig:"서부발전, 석탄화력 폐지 대응 지원체계 강화",
+   summary:"韓國西部發電強化對燃煤火力電廠除役的因應與支援體系，協助相關人員與地區順利轉型。",
+   tags:["電力","淨零","能源"],
+   link:"https://www.keei.re.kr/board.es?mid=a10202010000&bid=0007#36159"},
+  {region:"韓國",date:"2026-06-25",source:"韓國能源經濟研究院 KEEI",
+   title:"「能源安全與碳中和並行」濟州論壇探討國際合作方案",
+   orig:"\"에너지 안보와 탄소중립 함께\" 제주포럼서 국제 협력방안 논의",
+   summary:"在濟州論壇上，與會者就如何兼顧能源安全與碳中和，探討國際合作方案。",
+   tags:["能源","淨零","氣候"],
+   link:"https://www.keei.re.kr/board.es?mid=a10202010000&bid=0007#36158"},
+  {region:"德國",date:"2026-06-24",source:"德國經濟暨能源部",
+   title:"聯邦內閣通過《能源效率法》：落實簡化、減少官僚負擔",
+   orig:"Vereinfachungen umgesetzt und Bürokratie reduziert - Bundeskabinett beschließt Energieeffizienzgesetz",
+   summary:"德國聯邦內閣通過《能源效率法》修正案，落實程序簡化並減少官僚負擔，以持續推動能源效率提升。",
+   tags:["能源效率","能源"],
+   link:"https://www.bundeswirtschaftsministerium.de/Navigation/DE/Service/Medienraum/medienraum.html#energieeffizienzgesetz-2026-06-24"},
+  {region:"瑞士",date:"2026-06-24",source:"瑞士聯邦能源局 BFE",
+   title:"報告：Power-to-X 作為供應安全貢獻的潛力",
+   orig:"Publikationshinweis: Potenzial von Power-to-X als Beitrag zur Versorgungssicherheit",
+   summary:"瑞士聯邦委員會於6月24日通過《Power-to-X 作為供應安全貢獻之潛力》報告，評估以再生電力轉化為氫氣及合成燃料對能源供應安全的貢獻。",
+   tags:["氫能","能源","儲能"],
+   link:"https://www.bfe.admin.ch/bfe/de/home/news-und-medien/medienmitteilungen/mm-test.html#power-to-x-2026-06-24"},
+  {region:"瑞士",date:"2026-06-24",source:"瑞士聯邦能源局 BFE",
+   title:"報告：2012–2024年新乘用車、貨車與輕型半掛車CO2排放規範的影響",
+   orig:"Publikationshinweis: Auswirkungen der CO2-Emissionsvorschriften für neue Personenwagen, Lieferwagen und leichte Sattelschlepper 2012-2024",
+   summary:"瑞士聯邦委員會通過依CO2法提交的報告，評估2012至2024年針對新乘用車、貨車與輕型半掛車的CO2排放規範成效。",
+   tags:["運輸","環境","統計"],
+   link:"https://www.bfe.admin.ch/bfe/de/home/news-und-medien/medienmitteilungen/mm-test.html#co2-fahrzeuge-2026-06-24"},
+
+  // ===== IEA 國際能源總署 / IRENA 國際再生能源總署（Google News）=====
+  {region:"國際",date:"2026-06-22",source:"IEA（國際能源總署）",
+   title:"全球石油供應如何重新調整以填補荷莫茲海峽衝擊造成的缺口（IEA 分析）",
+   orig:"How global oil supplies have readjusted to help fill the huge gap left by the Strait of Hormuz shock – Analysis",
+   summary:"IEA 分析荷莫茲海峽危機後，全球石油供應如何重新調整以填補供給缺口、穩定油市。",
+   tags:["油價","能源"],
+   link:"https://news.google.com/rss/articles/CBMizgFBVV95cUxOTTg1MUlhRDBnQkpCaHRoX1pCUUo3ZkZZVkxJSG82RFQxS2JtYzVFamp3bU0zem1SUzhJaFZtOEtIaEtISmY5OWlYbEVBdTROTU82WEtmeklpSGJSd0JOLVNKclR2RmFNYjJpUmcyMGdhdFBDWS1QbkZCLU9RNm9YYzdvbEhTT01BdHRyRzVGRy1UMFdoVVZ5dDBuS1dRZVMycUk4QUlQOF9nTWNzeWkyMGd5MEtkVUxQamZ6UGFHVGFOMmZzRUs3aW9GNDh3Zw?oc=5"},
+  {region:"國際",date:"2026-06-17",source:"IEA（國際能源總署）",
+   title:"石油市場報告－2026年6月（IEA 分析）",
+   orig:"Oil Market Report - June 2026 – Analysis",
+   summary:"IEA 發布2026年6月《石油市場報告》，分析全球原油供需與價格走勢。",
+   tags:["油價","能源"],
+   link:"https://news.google.com/rss/articles/CBMiZkFVX3lxTE1YU1dTM2RMdTdhcHdGUm1fS2c3cUwwVktiY2l6S192eEZ1R0hTYmVlVGtJcGpJTDZWbGVVeTNDTUplWkdtXzFobXBOME1nYl8wanVGM001cm9UUF90TGQxM2lCRUxJUQ?oc=5"},
+  {region:"國際",date:"2026-04-01",source:"IRENA（國際再生能源總署）",
+   title:"2026年再生能源裝置容量統計",
+   orig:"Renewable capacity statistics 2026",
+   summary:"IRENA 發布《2026年再生能源裝置容量統計》，彙整全球再生能源裝置容量的最新數據。",
+   tags:["再生能源","統計","能源"],
+   link:"https://news.google.com/rss/articles/CBMisAFBVV95cUxNM0JNSk9vYUZvMURpTDQxcnAyMjBXNk14bFo2aE1LQzJfUkdUdUhsdjFWcVh0dG1zN1hUeUExTWVRUDN4SERlTnJSYW5TTXFmRjhhUDk5dWE0UUVFSW5WRjQ3bXk0Q1ByaXhyZmdKZDVFZUVrWUxocXg4Nm9YdlVMcVdBMUNsLUFFdW44WE9xamdPYk9QUVRkZDVmU0RGelRxdWdNQlNGQ3ZUM3dOc0Q1Mg?oc=5"}
+];
+
+const $ = s => document.querySelector(s);
+const list = $("#list"), countEl = $("#count");
+$("#total").textContent = DATA.length;
+
+// 國家／地區 chips（可複選，OR）
+const activeCountries = new Set();
+const regionOrder = ["日本","韓國","加拿大","美國","英國","德國","法國","瑞士","歐盟","國際"];
+const countryBox = $("#countryFilters");
+[...new Set(DATA.map(d=>d.region))]
+  .sort((a,b)=>regionOrder.indexOf(a)-regionOrder.indexOf(b))
+  .forEach(r=>{
+    const c=document.createElement("span");
+    c.className="cchip"; c.dataset.country=r;
+    c.textContent=(FLAG[r]||"")+" "+r+"（"+DATA.filter(d=>d.region===r).length+"）";
+    c.onclick=()=>{ c.classList.toggle("on");
+      activeCountries.has(r)?activeCountries.delete(r):activeCountries.add(r); render(); };
+    countryBox.appendChild(c);
+  });
+
+// 來源類型 chips（官方 / 其他新聞）
+const activeKinds = new Set();
+const kindBox = $("#kindFilters");
+["官方","其他新聞"].forEach(k=>{
+  const c=document.createElement("span");
+  c.className="kchip"; c.dataset.kind=k;
+  c.textContent=(k==="官方"?"🏛️ ":"📰 ")+k+"（"+DATA.filter(d=>kindOf(d)===k).length+"）";
+  c.onclick=()=>{ c.classList.toggle("on");
+    activeKinds.has(k)?activeKinds.delete(k):activeKinds.add(k); render(); };
+  kindBox.appendChild(c);
+});
+
+// tag chips
+const allTags = [...new Set(DATA.flatMap(d=>d.tags))];
+const tagOrder = ["核能","電力","能源","潔淨電力","太陽能","地熱","氫能","LNG","油價","甲烷","能源效率","運輸","電動車","關鍵礦產","SMR","淨零","氣候","環境","自然資源","公民參與"];
+allTags.sort((a,b)=>{
+  const ia=tagOrder.indexOf(a), ib=tagOrder.indexOf(b);
+  return (ia<0?99:ia)-(ib<0?99:ib);
+});
+const activeTags = new Set();
+const tagBox = $("#tagFilters");
+allTags.forEach(t=>{
+  const c=document.createElement("span");
+  c.className="chip"; c.textContent="#"+t; c.dataset.tag=t;
+  c.onclick=()=>{ c.classList.toggle("on");
+    activeTags.has(t)?activeTags.delete(t):activeTags.add(t); render(); };
+  tagBox.appendChild(c);
+});
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function hl(text, q){
+  const e = esc(text);
+  if(!q) return e;
+  try{ return e.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>"); }
+  catch{ return e; }
+}
+
+function render(){
+  const q = $("#search").value.trim();
+  const sort = $("#sort").value;
+  let rows = DATA.filter(d=>{
+    if(activeCountries.size && !activeCountries.has(d.region)) return false;
+    if(activeKinds.size && !activeKinds.has(kindOf(d))) return false;
+    if(activeTags.size && ![...activeTags].every(t=>d.tags.includes(t))) return false;
+    if(q){
+      const hay = (d.title+d.summary+d.orig+d.source+d.region+d.tags.join(" ")).toLowerCase();
+      if(!hay.includes(q.toLowerCase())) return false;
+    }
+    return true;
+  });
+  if(sort==="rec") rows.sort((a,b)=> (recInfo(b).score-recInfo(a).score) || b.date.localeCompare(a.date));
+  else rows.sort((a,b)=> sort==="new" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+
+  const recCount = rows.filter(d=>recInfo(d).rec).length;
+  countEl.textContent = `符合條件：${rows.length} 則　|　⭐ 推薦觀看：${recCount} 則`;
+  if(!rows.length){ list.innerHTML='<div class="empty">沒有符合條件的結果，請調整搜尋或篩選。</div>'; return; }
+
+  list.innerHTML = rows.map(d=>{
+    const rc = RCLS[d.region]||"xx";
+    const flag = (FLAG[d.region]||"")+" "+d.region;
+    const k = kindOf(d);
+    const kbadge = `<span class="kind ${k==="官方"?"gov":"news"}">${k==="官方"?"🏛️ 官方":"📰 新聞"}</span>`;
+    const info = recInfo(d);
+    const recBadge = info.rec ? `<span class="rec">⭐ 推薦觀看</span>` : "";
+    const twNote = info.rec && TW_NOTE[info.theme] ? `<p class="twnote">${TW_NOTE[info.theme]}</p>` : "";
+    const tags = d.tags.map(t=>`<span class="tag" onclick="quickTag('${t}')">#${t}</span>`).join("");
+    return `<div class="card ${rc}">
+      <div class="top">
+        <span class="region">${flag}</span>
+        ${kbadge}
+        ${recBadge}
+        <span class="src">${hl(d.source,q)}</span>
+        <span class="date">${d.date}</span>
+      </div>
+      <h3><a href="${d.link}" target="_blank" rel="noopener">${hl(d.title,q)}</a></h3>
+      <p class="summary">${hl(d.summary,q)}</p>
+      ${twNote}
+      <p class="orig">原標題：${hl(d.orig,q)}</p>
+      <div class="tags">${tags}</div>
+    </div>`;
+  }).join("");
+}
+
+function quickTag(t){
+  if(!activeTags.has(t)){
+    activeTags.add(t);
+    document.querySelector(`.chip[data-tag="${t}"]`)?.classList.add("on");
+    render();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+}
+
+// 篩選面板收合（預設收合，讓新聞清單佔最大版面）
+const toggleBtn = $("#toggleFilters"), panel = $("#filterPanel");
+toggleBtn.addEventListener("click", ()=>{
+  const collapsed = panel.classList.toggle("collapsed");
+  toggleBtn.classList.toggle("active", !collapsed);
+  toggleBtn.textContent = collapsed ? "⚙️ 篩選 ▾" : "⚙️ 篩選 ▴";
+});
+
+// 已選條件摘要（面板收合時也能看到目前篩選）
+function updateSummary(){
+  const parts=[];
+  if(activeCountries.size) parts.push("地區："+[...activeCountries].join("、"));
+  if(activeKinds.size) parts.push("來源："+[...activeKinds].join("、"));
+  if(activeTags.size) parts.push("議題："+[...activeTags].map(t=>"#"+t).join(" "));
+  const q=$("#search").value.trim();
+  if(q) parts.push("關鍵字：「"+q+"」");
+  $("#filterSummary").textContent = parts.length ? "目前篩選 → "+parts.join("　|　") : "";
+}
+const _render = render;
+render = function(){ _render(); updateSummary(); };
+
+$("#search").addEventListener("input", render);
+$("#sort").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>
