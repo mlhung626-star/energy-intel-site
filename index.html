@@ -94,7 +94,7 @@
 <header>
   <div class="wrap">
     <h1>國際能源情資查詢</h1>
-    <div class="sub">日／韓 RSS＋加拿大環境與自然資源＋世界核能新聞＋歐盟能源總署＋英國、德國等政府與新聞來源｜共 <span id="total">0</span> 則｜更新：2026-06-25</div>
+    <div class="sub">日／韓 RSS＋加拿大環境與自然資源＋世界核能新聞＋歐盟能源總署＋英國、德國等政府與新聞來源｜共 <span id="total">0</span> 則｜更新：2026-06-26</div>
   </div>
 </header>
 
@@ -1261,144 +1261,55 @@ const DATA = [
    orig:"Renewable capacity statistics 2026",
    summary:"IRENA 發布《2026年再生能源裝置容量統計》，彙整全球再生能源裝置容量的最新數據。",
    tags:["再生能源","統計","能源"],
-   link:"https://news.google.com/rss/articles/CBMisAFBVV95cUxNM0JNSk9vYUZvMURpTDQxcnAyMjBXNk14bFo2aE1LQzJfUkdUdUhsdjFWcVh0dG1zN1hUeUExTWVRUDN4SERlTnJSYW5TTXFmRjhhUDk5dWE0UUVFSW5WRjQ3bXk0Q1ByaXhyZmdKZDVFZUVrWUxocXg4Nm9YdlVMcVdBMUNsLUFFdW44WE9xamdPYk9QUVRkZDVmU0RGelRxdWdNQlNGQ3ZUM3dOc0Q1Mg?oc=5"}
-];
+   link:"https://news.google.com/rss/articles/CBMisAFBVV95cUxNM0JNSk9vYUZvMURpTDQxcnAyMjBXNk14bFo2aE1LQzJfUkdUdUhsdjFWcVh0dG1zN1hUeUExTWVRUDN4SERlTnJSYW5TTXFmRjhhUDk5dWE0UUVFSW5WRjQ3bXk0Q1ByaXhyZmdKZDVFZUVrWUxocXg4Nm9YdlVMcVdBMUNsLUFFdW44WE9xamdPYk9QUVRkZDVmU0RGelRxdWdNQlNGQ3ZUM3dOc0Q1Mg?oc=5"},
 
-const $ = s => document.querySelector(s);
-const list = $("#list"), countEl = $("#count");
-$("#total").textContent = DATA.length;
-
-// 國家／地區 chips（可複選，OR）
-const activeCountries = new Set();
-const regionOrder = ["日本","韓國","加拿大","美國","英國","德國","法國","瑞士","歐盟","國際"];
-const countryBox = $("#countryFilters");
-[...new Set(DATA.map(d=>d.region))]
-  .sort((a,b)=>regionOrder.indexOf(a)-regionOrder.indexOf(b))
-  .forEach(r=>{
-    const c=document.createElement("span");
-    c.className="cchip"; c.dataset.country=r;
-    c.textContent=(FLAG[r]||"")+" "+r+"（"+DATA.filter(d=>d.region===r).length+"）";
-    c.onclick=()=>{ c.classList.toggle("on");
-      activeCountries.has(r)?activeCountries.delete(r):activeCountries.add(r); render(); };
-    countryBox.appendChild(c);
-  });
-
-// 來源類型 chips（官方 / 其他新聞）
-const activeKinds = new Set();
-const kindBox = $("#kindFilters");
-["官方","其他新聞"].forEach(k=>{
-  const c=document.createElement("span");
-  c.className="kchip"; c.dataset.kind=k;
-  c.textContent=(k==="官方"?"🏛️ ":"📰 ")+k+"（"+DATA.filter(d=>kindOf(d)===k).length+"）";
-  c.onclick=()=>{ c.classList.toggle("on");
-    activeKinds.has(k)?activeKinds.delete(k):activeKinds.add(k); render(); };
-  kindBox.appendChild(c);
-});
-
-// tag chips
-const allTags = [...new Set(DATA.flatMap(d=>d.tags))];
-const tagOrder = ["核能","電力","能源","潔淨電力","太陽能","地熱","氫能","LNG","油價","甲烷","能源效率","運輸","電動車","關鍵礦產","SMR","淨零","氣候","環境","自然資源","公民參與"];
-allTags.sort((a,b)=>{
-  const ia=tagOrder.indexOf(a), ib=tagOrder.indexOf(b);
-  return (ia<0?99:ia)-(ib<0?99:ib);
-});
-const activeTags = new Set();
-const tagBox = $("#tagFilters");
-allTags.forEach(t=>{
-  const c=document.createElement("span");
-  c.className="chip"; c.textContent="#"+t; c.dataset.tag=t;
-  c.onclick=()=>{ c.classList.toggle("on");
-    activeTags.has(t)?activeTags.delete(t):activeTags.add(t); render(); };
-  tagBox.appendChild(c);
-});
-
-function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-function hl(text, q){
-  const e = esc(text);
-  if(!q) return e;
-  try{ return e.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>"); }
-  catch{ return e; }
-}
-
-function render(){
-  const q = $("#search").value.trim();
-  const sort = $("#sort").value;
-  let rows = DATA.filter(d=>{
-    if(activeCountries.size && !activeCountries.has(d.region)) return false;
-    if(activeKinds.size && !activeKinds.has(kindOf(d))) return false;
-    if(activeTags.size && ![...activeTags].every(t=>d.tags.includes(t))) return false;
-    if(q){
-      const hay = (d.title+d.summary+d.orig+d.source+d.region+d.tags.join(" ")).toLowerCase();
-      if(!hay.includes(q.toLowerCase())) return false;
-    }
-    return true;
-  });
-  if(sort==="rec") rows.sort((a,b)=> (recInfo(b).score-recInfo(a).score) || b.date.localeCompare(a.date));
-  else rows.sort((a,b)=> sort==="new" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
-
-  const recCount = rows.filter(d=>recInfo(d).rec).length;
-  countEl.textContent = `符合條件：${rows.length} 則　|　⭐ 推薦觀看：${recCount} 則`;
-  if(!rows.length){ list.innerHTML='<div class="empty">沒有符合條件的結果，請調整搜尋或篩選。</div>'; return; }
-
-  list.innerHTML = rows.map(d=>{
-    const rc = RCLS[d.region]||"xx";
-    const flag = (FLAG[d.region]||"")+" "+d.region;
-    const k = kindOf(d);
-    const kbadge = `<span class="kind ${k==="官方"?"gov":"news"}">${k==="官方"?"🏛️ 官方":"📰 新聞"}</span>`;
-    const info = recInfo(d);
-    const recBadge = info.rec ? `<span class="rec">⭐ 推薦觀看</span>` : "";
-    const twNote = info.rec && TW_NOTE[info.theme] ? `<p class="twnote">${TW_NOTE[info.theme]}</p>` : "";
-    const tags = d.tags.map(t=>`<span class="tag" onclick="quickTag('${t}')">#${t}</span>`).join("");
-    return `<div class="card ${rc}">
-      <div class="top">
-        <span class="region">${flag}</span>
-        ${kbadge}
-        ${recBadge}
-        <span class="src">${hl(d.source,q)}</span>
-        <span class="date">${d.date}</span>
-      </div>
-      <h3><a href="${d.link}" target="_blank" rel="noopener">${hl(d.title,q)}</a></h3>
-      <p class="summary">${hl(d.summary,q)}</p>
-      ${twNote}
-      <p class="orig">原標題：${hl(d.orig,q)}</p>
-      <div class="tags">${tags}</div>
-    </div>`;
-  }).join("");
-}
-
-function quickTag(t){
-  if(!activeTags.has(t)){
-    activeTags.add(t);
-    document.querySelector(`.chip[data-tag="${t}"]`)?.classList.add("on");
-    render();
-    window.scrollTo({top:0,behavior:"smooth"});
-  }
-}
-
-// 篩選面板收合（預設收合，讓新聞清單佔最大版面）
-const toggleBtn = $("#toggleFilters"), panel = $("#filterPanel");
-toggleBtn.addEventListener("click", ()=>{
-  const collapsed = panel.classList.toggle("collapsed");
-  toggleBtn.classList.toggle("active", !collapsed);
-  toggleBtn.textContent = collapsed ? "⚙️ 篩選 ▾" : "⚙️ 篩選 ▴";
-});
-
-// 已選條件摘要（面板收合時也能看到目前篩選）
-function updateSummary(){
-  const parts=[];
-  if(activeCountries.size) parts.push("地區："+[...activeCountries].join("、"));
-  if(activeKinds.size) parts.push("來源："+[...activeKinds].join("、"));
-  if(activeTags.size) parts.push("議題："+[...activeTags].map(t=>"#"+t).join(" "));
-  const q=$("#search").value.trim();
-  if(q) parts.push("關鍵字：「"+q+"」");
-  $("#filterSummary").textContent = parts.length ? "目前篩選 → "+parts.join("　|　") : "";
-}
-const _render = render;
-render = function(){ _render(); updateSummary(); };
-
-$("#search").addEventListener("input", render);
-$("#sort").addEventListener("change", render);
-render();
-</script>
-</body>
-</html>
+  // ===== 2026-06-26 新增 =====
+  // --- 日本 ---
+  {region:"日本",date:"2026-06-25",source:"日本經濟新聞",
+   title:"燃料商社Sinanen HD中込社長：石油製品「供應卡關」有多重因素",
+   orig:"燃料商社シナネンHD中込社長「石油製品『目詰まり』には様々な要因」",
+   summary:"燃料商社Sinanen控股中込社長受訪指出，近期石油製品出現供應「目詰まり（卡關）」的背景有多重因素，影響流通與供給。",
+   tags:["油價","能源"],
+   link:"https://www.nikkei.com/article/DGXZQOUC241H90U6A520C2000000/"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／TBS NEWS DIG",
+   title:"北陸電力股東會：「脫核」提案全遭否決，志賀核電廠重啟方針不變",
+   orig:"「お金のことばかりじゃなく大事なことが」株主の“脱原発”提案は全否決 北陸電力は志賀原発の再稼働方針崩さず 富山",
+   summary:"北陸電力股東會上，要求撤出核電的多項股東「脫核」提案全數遭否決，公司維持志賀核電廠重啟方針。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMiZ0FVX3lxTE4tbFdUX2NyRXB4MktDaG1XS1FReWwzNjdIdGZiVGJqOEhMOHJHNnlqei1wYlRMVGxCeS1rWDl3b1cwM1J1eV9oN2tmWjd4MllYZW1aamF4blI0UmdsTUFJS21yUE94T0E?oc=5"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／UHB北海道文化放送",
+   title:"北海道電力股東會：強調泊核電廠重啟可降電費，「努力降約1000日圓」",
+   orig:"【北海道電力が株主総会】泊原発再稼働で電気料金値下げを強調「1000円程度を努力」一部の株主が運用凍結提案するも…“否決”",
+   summary:"北海道電力股東會上強調泊核電廠重啟後可調降電費、目標約1000日圓，部分股東提出凍結運用案但遭否決；重啟時程預定今夏正式公布。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMiV0FVX3lxTE1uajVrWnZJZjRLNXRrOWVFektqUUNzWlZtc1VVSkVrd1hyMXNRZG1mdzdBaFZiVHpYbWZEWEZ2eXhRNmRCNk1rbFl6VW9OZFhnd3VSRzFJSQ?oc=5"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／dメニュー新聞",
+   title:"北陸電力股東「脫核」提案全否決，志賀核電廠重啟方針不變（dmenu）",
+   orig:"「お金のことばかりじゃなく大事なことが」株主の“脱原発”提案は全否決　北陸電力は志賀原発の再稼働方針崩さず　富山 - ｄメニューニュース",
+   summary:"同則北陸電力股東會新聞之dメニュー轉載：脫核股東提案全遭否決，志賀核電廠重啟方針維持不變。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMijAFBVV95cUxOWWhqcjNxYmVmS3lZakdScjZmMno1blpVUnV4Z29NU1RTVXRnQ05ZLW12cC05aFhObUc4eEpJLTVwQ0hJQUh1UGxYVHNsaGtqUm9mWVhfTjNzbF80UEthd0VJZ2hnR1FIMER6MEltTUp3X0FWdmpRaTVHdHdId3FnblQ3dXQ0VW0yVmJnWtIBf0FVX3lxTFBrZFNYNExjbmRWSXBIUFVQcDRTVlRHemZkQTNfakJmMHdOUENsY3pEMXNkTVVrOHRWV3R2aU9JQ2xlTVJwLXZNanZ3WU8yaV9SbTA2NEw5UTJJZVJGQmotUWFyUzkxS0MtQVZ2RVN2RzlxR2Z3TzBRNjdTdHAyYm8?oc=5"},
+  {region:"日本",date:"2026-06-25",source:"經濟產業省／資源能源廳（エネこれ）",
+   title:"柏崎刈羽核電廠6號機重啟——重啟的重要性與背景（後篇）",
+   orig:"柏崎刈羽原発6号機が再稼働―運転再開の重要性とその背景（後編）｜エネこれ",
+   summary:"日本資源能源廳「エネこれ」專欄解說柏崎刈羽核電廠6號機重啟，分析運轉重啟對電力供給與能源政策的重要性與背景（後篇）。",
+   tags:["核能","電力","能源"],
+   link:"https://news.google.com/rss/articles/CBMijAFBVV95cUxQWGw1V3VTNHF5d3huRlNlczdQV1M4cGsxU2lFbzFSR3V3ekh0UFpnWEZtVE4wSWRoemlPelJTV251M0NfZFBTZEg4ellFLXV1eXQ2NkhmVll0SDFITENweVl3aVVkUW8zbkk4T1l4b1o3dG1YTGhRWWJ5UTZEMF80SmtuNFdZcU0zajdyNw?oc=5"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／HTB北海道電視",
+   title:"北海道電力股東會否決反核議案，社長承諾重啟後盡力降價",
+   orig:"北電が株主総会 原発反対の議案は否決 社長は再稼働後の値下げを「できるだけ頑張りたい」",
+   summary:"北海道電力股東會否決反核議案，社長表示泊核電廠重啟後將「盡可能努力」調降電費，重啟時程今夏正式公布。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMiWkFVX3lxTE0zVUliQ3BscXVvUHU0eGx2MWJPaTE0aTR1OGh6ek0zNlNCck5wSGd3NE1WUjRLUnJTMGRNYjRsM21fRnd3M3VDTkNiWm96cEY2TVctcFJZV0lndw?oc=5"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／チューリップテレビ",
+   title:"北陸電力股東「脫核」提案否決（鬱金香電視）",
+   orig:"「お金のことばかりじゃなく大事なことが」株主の“脱原発”提案は全否決　北陸電力は志賀原発の再稼働方針崩さず　富山(チューリップテレビ)",
+   summary:"同則北陸電力股東會新聞之富山在地電視台報導：脫核股東提案遭否決，志賀核電廠重啟方針不變。",
+   tags:["核能","電力"],
+   link:"https://news.yahoo.co.jp/articles/8274826aad911c493159f5fe838d2f6a6733d705?source=rss"},
+  {region:"日本",date:"2026-06-25",source:"日本核電重啟／Yahoo!新聞",
+   title:"北陸電力股東「脫核」提案否決（Yahoo新聞）",
+   orig:"「お金のことばかりじゃなく大事なことが」株主の“脱原発”提案は全否決 北陸電力は志賀原発の再稼働方針崩さず 富山 - Yahoo!ニュース",
+   summary:"同則北陸電力股東會新聞之Yahoo新聞轉載：脫核股東提案全否決，志賀核電廠重啟方針維持。",
+   tags:["核能","電力"],
+   link:"https://news.google.com/rss/articles/CBMif0FVX3lxTE5XZjAzUFhELWhnZW9yMGh1bWprX0pYbWNoa3dUaW5vRzRhRDh
