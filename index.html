@@ -102,8 +102,8 @@
   <div class="wrap topbar">
     <input id="search" type="text" placeholder="🔍 搜尋關鍵字（標題、摘要、來源…）">
     <select id="sort">
+      <option value="date">日期優先（同日依推薦）</option>
       <option value="rec">⭐ 推薦優先</option>
-      <option value="new">時間：新→舊</option>
       <option value="old">時間：舊→新</option>
     </select>
     <button id="toggleFilters" type="button">⚙️ 篩選 ▾</button>
@@ -1559,6 +1559,14 @@ const DATA = [
    link:"https://mcee.go.kr/home/web/index.do?menuId=10598#18602"}
 ];
 
+// 排除每日例行雜訊：日報、預報、行程／일정（含韓文原標題）
+const EXCLUDE_TITLE = /日報|日刊動向|預報|行程/;
+const EXCLUDE_ORIG = /(일일|매일).*(동향|예보)|미세먼지\s*예보|(장차관|장관|차관)\s*일정|일정\s*[)\]]/;
+for(let i=DATA.length-1;i>=0;i--){
+  const d=DATA[i];
+  if(EXCLUDE_TITLE.test(d.title||"") || EXCLUDE_ORIG.test(d.orig||"")) DATA.splice(i,1);
+}
+
 const $ = s => document.querySelector(s);
 const list = $("#list"), countEl = $("#count");
 $("#total").textContent = DATA.length;
@@ -1629,7 +1637,8 @@ function render(){
     return true;
   });
   if(sort==="rec") rows.sort((a,b)=> (recInfo(b).score-recInfo(a).score) || b.date.localeCompare(a.date));
-  else rows.sort((a,b)=> sort==="new" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+  else if(sort==="old") rows.sort((a,b)=> a.date.localeCompare(b.date) || (recInfo(b).score-recInfo(a).score));
+  else rows.sort((a,b)=> b.date.localeCompare(a.date) || (recInfo(b).score-recInfo(a).score)); // date 預設：日期新→舊，同日依推薦
 
   const recCount = rows.filter(d=>recInfo(d).rec).length;
   countEl.textContent = `符合條件：${rows.length} 則　|　⭐ 推薦觀看：${recCount} 則`;
